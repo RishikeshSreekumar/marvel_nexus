@@ -1,0 +1,23 @@
+---
+import MarvelNexus from "../components/MarvelNexus";
+import "../styles/global.css";
+
+const title = "MCU Timeline — Marvel Nexus";
+const description = "Browse the MCU in story chronology or release order.";
+const canonical = new URL("/timeline", Astro.url.origin);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#05070b" />
+    <link rel="icon" href="/icon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-icon.png" />
+    <link rel="canonical" href={canonical} />
+    <title>{title}</title>
+  </head>
+  <body><MarvelNexus page="timeline" client:load /></body>
+</html>
