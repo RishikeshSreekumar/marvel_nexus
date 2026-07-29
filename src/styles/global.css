@@ -824,6 +824,8 @@ button:hover .story-artwork img,
   .search-trigger { font-size: 0; }
   .search-trigger kbd { display: none; }
   .hero { min-height: auto; grid-template-columns: 1fr; padding: 65px 24px 35px; }
+  .hero-copy,
+  .hero-orbit { min-width: 0; }
   .hero h1 { font-size: clamp(54px, 15vw, 86px); }
   .hero-orbit { min-height: 350px; }
   .orbit-a { width: 340px; }
@@ -1467,4 +1469,60 @@ body { overflow-x: hidden; }
     justify-content: center;
   }
   .page-home .hero { padding-top: 54px; }
+
+  /* Phone layout: keep controls compact and content inside the viewport. */
+  .page-graph .workspace-head,
+  .page-timeline .workspace-head {
+    padding: 32px 20px 24px;
+  }
+  .page-graph .workspace-head h2,
+  .page-timeline .workspace-head h2 {
+    max-width: 100%;
+    font-size: clamp(38px, 10.5vw, 48px);
+    line-height: .92;
+    overflow-wrap: anywhere;
+  }
+  .hero h1 {
+    max-width: 100%;
+    font-size: clamp(42px, 13.5vw, 60px);
+  }
+  .graph-map {
+    display: block;
+    position: relative;
+  }
+  .graph-toolbar {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: auto;
+    height: auto;
+    margin: 0;
+  }
+  .graph-toolbar button {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0 8px;
+  }
+  .graph-toolbar output { min-width: 38px; }
+  .graph-scroll {
+    width: 100%;
+    min-height: 440px;
+  }
+  .graph-legend { gap: 12px; }
+  .graph-actions { gap: 10px; }
+  .inspector { width: 100%; }
+  .timeline-card { min-width: 0; }
+  .timeline-card h3,
+  .timeline-card p { overflow-wrap: anywhere; }
+  .search-panel {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 20px);
+  }
+  .search-modal { padding: 10px; }
+  .search-input {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    padding-inline: 12px;
+  }
+  .search-input input { min-width: 0; font-size: 18px; }
+  .search-results { max-height: calc(100dvh - 130px); }
 }
