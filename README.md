@@ -32,7 +32,7 @@ npm run preview
 
 ## Editing stories
 
-Use a stable, URL-safe `id` and add each title through the `s(...)` helper in `MarvelNexus.tsx`. Canonical MCU entries belong in `chronologyInput`; alternate legacy universes belong in `legacyInput`.
+Use a stable, URL-safe `id` and add each title through the `s(...)` helper in `src/lib/stories.ts`. Canonical MCU entries belong in `chronologyInput`; alternate legacy universes belong in `legacyInput`.
 
 The dependency list contains story IDs that must already exist somewhere in the combined dataset. Dependencies point from required context toward the title that requires it. The application validates duplicate IDs, missing references, self-links, cycles, and the expected 95/78/17 counts at startup and in tests.
 
