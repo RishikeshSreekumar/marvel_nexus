@@ -37,7 +37,8 @@ export default function GraphMinimap({
   contentBox: React.RefObject<ContentBox>;
   zoom: number;
   scrollRef: React.RefObject<HTMLDivElement | null>;
-  destinationId: string;
+  /** null when the map is showing everything rather than one path. */
+  destinationId: string | null;
 }) {
   const [view, setView] = useState({ left: 0, top: 0, width: 0, height: 0 });
   const frameRef = useRef(0);

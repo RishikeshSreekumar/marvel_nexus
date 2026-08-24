@@ -126,8 +126,8 @@ const chronologyInput: StoryInput[] = [
   s("punisher-special", "The Punisher: One Last Kill", "Special", "2026", "2027", "Street", ["punisher-2", "daredevil-ba"], "Frank Castle returns for one last mission."),
   s("wonder-man", "Wonder Man", "Series", "2026", "2027", "Future", ["shang-chi"], "Hollywood satire meets superhuman identity."),
   s("fantastic-four", "The Fantastic Four: First Steps", "Movie", "2025", "Earth-828 / 1960s", "Multiverse", ["loki-2"], "A retro-futurist Fantastic Four enters the multiverse story."),
-  s("brand-new-day", "Spider-Man: Brand New Day", "Movie", "2026", "2027", "Future", ["no-way-home", "daredevil-ba", "shang-chi"], "Peter’s anonymous new chapter collides with New York’s street-level world."),
-  s("doomsday", "Avengers: Doomsday", "Movie", "2026", "Upcoming", "Future", ["thunderbolts", "fantastic-four", "loki-2", "deadpool-wolverine", "brand-new-day", "doctor-strange-2", "quantumania"], "The Avengers, Wakandans, Fantastic Four, and X-Men face Doctor Doom.", false, true),
+  s("brand-new-day", "Spider-Man: Brand New Day", "Movie", "2026", "2027", "Future", ["no-way-home", "daredevil-ba"], "Peter’s anonymous new chapter collides with New York’s street-level world."),
+  s("doomsday", "Avengers: Doomsday", "Movie", "2026", "Upcoming", "Future", ["thunderbolts", "fantastic-four", "loki-2", "deadpool-wolverine", "brand-new-day", "doctor-strange-2", "quantumania", "brave-new-world", "wakanda-forever", "love-thunder", "shang-chi"], "The Avengers, Wakandans, Fantastic Four, and X-Men face Doctor Doom.", false, true),
   s("secret-wars", "Avengers: Secret Wars", "Movie", "2027", "Upcoming", "Future", ["doomsday"], "The Multiverse Saga’s announced culmination.", false, true),
 ];
 
@@ -151,32 +151,56 @@ const legacyInput: StoryInput[] = [
   s("friendly-spider", "Your Friendly Neighborhood Spider-Man", "Series", "2025", "Alternate reality", "Legacy", [], "A standalone animated Peter Parker branch.", true),
 ];
 
+/**
+ * True first-release order for the whole dataset — canonical *and* legacy.
+ *
+ * One shared list rather than one per group: `releaseOrder` is compared across
+ * `allStories` (search tie-breaks), so two independently-numbered sequences
+ * would rank `x-men` alongside `iron-man` and `logan` ahead of `civil-war`.
+ * Ids absent from a group are simply skipped, so the ranks each group receives
+ * stay monotonic.
+ */
 const releaseSequence = [
-  "iron-man", "hulk", "iron-man-2", "thor", "first-avenger", "avengers",
-  "iron-man-3", "dark-world", "winter-soldier", "guardians", "agent-carter-1",
-  "daredevil-1", "age-ultron", "ant-man", "jessica-jones", "agent-carter-2", "civil-war",
-  "luke-cage", "daredevil-2", "doctor-strange", "iron-fist-1", "guardians-2", "homecoming",
-  "defenders", "ragnarok", "punisher-1", "black-panther", "infinity-war",
-  "ant-wasp", "jessica-jones-2", "luke-cage-2", "iron-fist-2", "daredevil-3",
-  "captain-marvel", "punisher-2", "jessica-jones-3", "endgame",
+  "x-men", "raimi-1", "x2", "raimi-2", "last-stand", "raimi-3",
+  "iron-man", "hulk", "xmen-origins", "iron-man-2", "thor", "first-class",
+  "first-avenger", "avengers", "amazing-1", "iron-man-3", "the-wolverine",
+  "dark-world", "winter-soldier", "amazing-2", "days-future", "guardians",
+  "agent-carter-1", "daredevil-1", "age-ultron", "ant-man", "jessica-jones",
+  "agent-carter-2", "deadpool", "daredevil-2", "civil-war", "luke-cage",
+  "doctor-strange", "logan", "iron-fist-1", "guardians-2", "homecoming",
+  "defenders", "ragnarok", "punisher-1", "black-panther", "jessica-jones-2",
+  "infinity-war", "deadpool-2", "luke-cage-2", "ant-wasp", "iron-fist-2",
+  "daredevil-3", "punisher-2", "captain-marvel", "endgame", "jessica-jones-3",
   "far-from-home", "wandavision", "falcon", "loki-1", "black-widow",
   "what-if-1", "shang-chi", "eternals", "hawkeye", "no-way-home",
-  "moon-knight", "doctor-strange-2", "ms-marvel", "love-thunder",
-  "she-hulk", "werewolf", "wakanda-forever", "guardians-holiday",
-  "quantumania", "guardians-3", "secret-invasion", "loki-2", "marvels",
-  "what-if-2", "echo", "deadpool-wolverine", "agatha", "what-if-3", "friendly-spider",
-  "daredevil-ba", "brave-new-world", "thunderbolts", "ironheart",
-  "eyes", "fantastic-four", "marvel-zombies", "wonder-man",
-  "daredevil-ba-2", "punisher-special", "brand-new-day", "doomsday",
+  "moon-knight", "doctor-strange-2", "ms-marvel", "love-thunder", "she-hulk",
+  "werewolf", "wakanda-forever", "guardians-holiday", "quantumania",
+  "guardians-3", "secret-invasion", "loki-2", "marvels", "what-if-2",
+  "echo", "xmen97", "deadpool-wolverine", "agatha", "what-if-3",
+  "friendly-spider", "brave-new-world", "daredevil-ba", "thunderbolts",
+  "ironheart", "fantastic-four", "eyes", "marvel-zombies", "wonder-man",
+  "daredevil-ba-2", "brand-new-day", "punisher-special", "doomsday",
   "secret-wars",
 ];
 
 export const chronology = finalizeStories(chronologyInput, releaseSequence);
+// The offset keeps legacy `storyOrder` from colliding with the chronology's.
 export const legacy = finalizeStories(
   legacyInput,
-  legacyInput.map((story) => story.id),
+  releaseSequence,
+  chronologyInput.length,
 );
 export const stories = [...chronology, ...legacy] as const;
 export const allStories: Story[] = [...stories];
-validateStories(allStories, { total: 95, canonical: 78, legacy: 17 });
+/**
+ * Dataset invariants, checked at module scope — which is *before* React mounts,
+ * so an ErrorBoundary cannot catch a throw here and the page would go blank.
+ *
+ * It therefore runs in dev only, where a loud failure is what you want. The
+ * production guarantee comes from tests/graph.test.ts, which asserts the same
+ * counts and calls validateStories directly; `npm run build` runs it first.
+ */
+if (import.meta.env?.DEV) {
+  validateStories(allStories, { total: 95, canonical: 78, legacy: 17 });
+}
 export const byId = new Map(allStories.map((story) => [story.id, story]));

@@ -1,0 +1,71 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description: string;
+  /** Route this page lives at, e.g. "/graph". Defaults to the site root. */
+  path?: string;
+}
+
+const { title, description, path = "/" } = Astro.props;
+const origin = Astro.url.origin;
+const canonical = new URL(path, origin).href;
+const ogImage = new URL("/og.png", origin).href;
+
+/**
+ * The only three faces global.css declares an @font-face for. Preloading a
+ * hash nothing references costs a request and a console warning, so this list
+ * has to be kept in step with the @font-face block at the top of global.css.
+ */
+const preloadFonts = [
+  "/fonts/846e56af0fc05ae5.woff2", // Space Grotesk
+  "/fonts/089eaaef6d2a3de2.woff2", // IBM Plex Mono
+  "/fonts/ea9c4a516a3e0945.woff2", // Barlow Condensed
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#05070b" />
+    <link rel="icon" href="/icon-32.png" sizes="32x32" type="image/png" />
+    <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-icon.png" sizes="180x180" />
+    <link rel="canonical" href={canonical} />
+
+    {/* Every visible card fires a poster lookup at Wikipedia, so warm the
+        connection before the island hydrates and starts asking. */}
+    <link rel="preconnect" href="https://en.wikipedia.org" crossorigin />
+    <link rel="dns-prefetch" href="https://en.wikipedia.org" />
+    {
+      preloadFonts.map((href) => (
+        // crossorigin is mandatory on font preloads: without it the browser
+        // treats the preload and the CSS request as different origins and
+        // downloads each file twice.
+        <link rel="preload" as="font" type="font/woff2" crossorigin href={href} />
+      ))
+    }
+
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1730" />
+    <meta property="og:image:height" content="909" />
+    <meta property="og:image:alt" content="Marvel Nexus story dependency map" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    <title>{title}</title>
+    <slot name="head" />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

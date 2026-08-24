@@ -1,4 +1,5 @@
-import type { GraphEdge, Story } from "../lib/graph";
+import { useEffect, useRef } from "react";
+import { nodeRelations, type GraphEdge, type Story } from "../lib/graph";
 import StoryArtwork from "./StoryArtwork";
 
 /**
@@ -16,31 +17,54 @@ export default function Inspector({
   visibleIds,
   watched,
   totalPrerequisites,
+  takeFocus,
   onChoose,
   onInspect,
   onToggleWatched,
 }: {
   story: Story;
-  destination: Story;
+  /** null when the map shows every story instead of one destination's path. */
+  destination: Story | null;
   chronology: readonly Story[];
   byId: Map<string, Story>;
   edges: GraphEdge[];
   visibleIds: Set<string>;
   watched: Set<string>;
   totalPrerequisites: number;
+  /**
+   * Whether this panel should pull focus on mount. Only true when the inspect
+   * came from the keyboard: stealing focus on a mouse click would eject the
+   * user from the graph mid-traversal.
+   */
+  takeFocus: boolean;
   onChoose: (id: string) => void;
   onInspect: (id: string) => void;
   onToggleWatched: (id: string) => void;
 }) {
+  const panelRef = useRef<HTMLElement>(null);
   const position = chronology.findIndex((entry) => entry.id === story.id);
-  const requires = story.deps.filter((id) => visibleIds.has(id));
-  // Why this story is on the map at all: the visible stories that depend on it.
-  const requiredBy = edges
-    .filter((edge) => edge.from === story.id && visibleIds.has(edge.to))
-    .map((edge) => edge.to);
+  // One derivation shared with the graph nodes' screen-reader descriptions, so
+  // the two can never disagree about what a story is connected to.
+  const { requires, unlocks: requiredBy } = nodeRelations(
+    story.id,
+    edges,
+    visibleIds,
+  );
+
+  // Fires per remount, because the caller keys this component on the story id.
+  useEffect(() => {
+    if (takeFocus) panelRef.current?.focus({ preventScroll: true });
+  }, [takeFocus]);
 
   return (
-    <aside className="inspector" style={{ viewTransitionName: "story-inspector" }}>
+    <aside
+      className="inspector"
+      ref={panelRef}
+      tabIndex={-1}
+      role="region"
+      aria-label={`Details: ${story.title}`}
+      style={{ viewTransitionName: "story-inspector" }}
+    >
       <StoryArtwork story={story} variant="backdrop" />
       <div className="inspector-top">
         <span className={`kind-badge ${story.kind.toLowerCase()}`}>{story.kind}</span>
@@ -60,9 +84,12 @@ export default function Inspector({
         <div><dt>Release year</dt><dd>{story.releaseYear}</dd></div>
         <div><dt>Branch</dt><dd>{story.lane} Saga</dd></div>
         <div><dt>Direct links</dt><dd>{story.deps.length}</dd></div>
-        <div><dt>Total path</dt><dd>{totalPrerequisites} prerequisites</dd></div>
+        <div>
+          <dt>{destination ? "Total path" : "On the map"}</dt>
+          <dd>{totalPrerequisites} {destination ? "prerequisites" : "other titles"}</dd>
+        </div>
       </dl>
-      {story.id === destination.id ? (
+      {destination && story.id === destination.id ? (
         <p className="destination-note">
           {totalPrerequisites === 0
             ? `${destination.title} is an origin point — nothing is required. Start here.`

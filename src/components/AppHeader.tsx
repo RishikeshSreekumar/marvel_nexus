@@ -25,6 +25,9 @@ export default function AppHeader({
 
   return (
     <header className={`topbar workspace-topbar ${compact ? "is-compact" : ""}`}>
+      {/* position:fixed, not in flow: .topbar is a grid with explicit columns,
+          so an in-flow child here would claim a track. */}
+      <a className="skip-link" href="#nexus-main">Skip to content</a>
       {/* The link carries the accessible name, so the lockup stays decorative. */}
       <a className="brand" href="/" aria-label="Marvel Nexus home">
         <span className="brand-name"><BrandLockup /></span>

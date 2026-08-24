@@ -16,6 +16,26 @@ import { clampZoom, fitZoom, zoomAtPoint, ZOOM_MAX, ZOOM_MIN } from "./graph";
 /** Content bounding box in layout space, captured by the edge-drawing pass. */
 export type ContentBox = { width: number; height: number };
 
+/**
+ * A node's position in layout space, relative to the stage.
+ *
+ * Keep this a walk up the offsetParent chain. Nodes sit inside positioned
+ * wrappers inside positioned columns, so reading a single offsetLeft/offsetTop
+ * would silently drop the column's offset. Shared by the edge-drawing pass and
+ * by anything that scrolls a node into view, which must agree exactly.
+ */
+export function offsetWithin(node: HTMLElement, stage: HTMLElement) {
+  let x = 0;
+  let y = 0;
+  let current: HTMLElement | null = node;
+  while (current && current !== stage) {
+    x += current.offsetLeft;
+    y += current.offsetTop;
+    current = current.offsetParent as HTMLElement | null;
+  }
+  return { x, y };
+}
+
 const PAN_THRESHOLD_PX = 4;
 const WHEEL_SENSITIVITY = 0.0025;
 const DOUBLE_CLICK_FACTOR = 1.6;
@@ -42,6 +62,10 @@ export function useGraphViewport({
     { pointerId: number; x: number; y: number; scrollLeft: number; scrollTop: number; active: boolean } | null
   >(null);
   const suppressClickRef = useRef(false);
+  /** Live touch points, keyed by pointerId — two of them make a pinch. */
+  const touchPointsRef = useRef(new Map<number, { x: number; y: number }>());
+  /** Distance and zoom captured when the second finger landed. */
+  const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
 
   /**
    * Apply zoom imperatively before writing scroll, then sync React state.
@@ -133,7 +157,25 @@ export function useGraphViewport({
 
   const onPointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      if (event.pointerType === "touch") return; // native touch panning is better
+      if (event.pointerType === "touch") {
+        // One finger keeps native panning, which is smoother than anything we
+        // could drive from JS. Two fingers become a pinch — before this, touch
+        // users had no way to zoom at all while the canvas label promised one.
+        touchPointsRef.current.set(event.pointerId, {
+          x: event.clientX,
+          y: event.clientY,
+        });
+        if (touchPointsRef.current.size === 2) {
+          const [a, b] = [...touchPointsRef.current.values()];
+          pinchRef.current = {
+            distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+            zoom: zoomRef.current,
+          };
+          // A pinch is never also a pan.
+          panRef.current = null;
+        }
+        return;
+      }
       if (event.button !== 0 && event.button !== 1) return;
       const viewport = scrollRef.current;
       if (!viewport) return;
@@ -151,8 +193,29 @@ export function useGraphViewport({
 
   const onPointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      const pan = panRef.current;
       const viewport = scrollRef.current;
+      if (event.pointerType === "touch") {
+        if (!touchPointsRef.current.has(event.pointerId)) return;
+        touchPointsRef.current.set(event.pointerId, {
+          x: event.clientX,
+          y: event.clientY,
+        });
+        const pinch = pinchRef.current;
+        if (!pinch || !viewport || touchPointsRef.current.size !== 2) return;
+        const [a, b] = [...touchPointsRef.current.values()];
+        const distance = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+        const rect = viewport.getBoundingClientRect();
+        // Anchor on the midpoint, through the same tested zoom maths the wheel
+        // and toolbar paths use.
+        applyZoom(
+          pinch.zoom * (distance / pinch.distance),
+          (a.x + b.x) / 2 - rect.left,
+          (a.y + b.y) / 2 - rect.top,
+        );
+        return;
+      }
+
+      const pan = panRef.current;
       if (!pan || !viewport || pan.pointerId !== event.pointerId) return;
 
       const dx = event.clientX - pan.x;
@@ -173,11 +236,16 @@ export function useGraphViewport({
       viewport.scrollLeft = pan.scrollLeft - dx;
       viewport.scrollTop = pan.scrollTop - dy;
     },
-    [scrollRef],
+    [applyZoom, scrollRef],
   );
 
   const endPan = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
+      if (event.pointerType === "touch") {
+        touchPointsRef.current.delete(event.pointerId);
+        if (touchPointsRef.current.size < 2) pinchRef.current = null;
+        return;
+      }
       const pan = panRef.current;
       if (!pan || pan.pointerId !== event.pointerId) return;
       panRef.current = null;

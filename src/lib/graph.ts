@@ -30,7 +30,19 @@ export type StoryInput = Omit<
   storyYearLabel: string;
 };
 
+/** The story the Inspector opens on when nothing else is selected. */
 export const FEATURED_STORY_ID = "doomsday";
+
+/**
+ * Sentinel destination meaning "no destination — show the whole map".
+ *
+ * This is the default: opening the graph on one film's ancestry hides most of
+ * the dataset behind a choice the reader has not made yet. Picking a
+ * destination is the *narrowing* action, so it is the one that carries a `to`
+ * param. Deliberately not a real story id — parseUrlState validates `to`
+ * against the story set, so `?to=all` can never collide with it.
+ */
+export const ALL_STORIES_ID = "all";
 
 /**
  * The timeline's default ordering. Referenced by parseUrlState, serializeUrlState
@@ -46,20 +58,28 @@ export const DEFAULT_TIMELINE_MODE: TimelineMode = "release";
  */
 export const DEFAULT_SHOW_OPTIONAL = false;
 
+/**
+ * `storyOrderOffset` exists because the dataset is authored as two lists that
+ * are later concatenated. Numbering both from zero makes `storyOrder` — and, if
+ * they are given separate release sequences, `releaseOrder` — collide across
+ * the join, which silently corrupts any sort over the combined set. Callers
+ * pass one shared release sequence and offset the second list's story order.
+ */
 export function finalizeStories(
   inputs: StoryInput[],
   releaseSequence: string[],
+  storyOrderOffset = 0,
 ): Story[] {
   const releaseRanks = new Map(
     releaseSequence.map((id, index) => [id, index]),
   );
 
-  return inputs.map((story, storyOrder) => ({
+  return inputs.map((story, index) => ({
     ...story,
-    storyOrder,
+    storyOrder: storyOrderOffset + index,
     releaseOrder:
       releaseRanks.get(story.id) ??
-      releaseSequence.length + story.releaseYear * 100 + storyOrder,
+      releaseSequence.length + story.releaseYear * 100 + storyOrderOffset + index,
   }));
 }
 
@@ -123,6 +143,11 @@ export type VisibleGraphOptions = {
  * Walk back from the destination, refusing to expand the dependencies of any
  * collapsed or hidden node.
  *
+ * A null destination means "the whole map": every story survives, subject only
+ * to the deep-cut and hidden filters. Collapse is meaningless there — nothing
+ * is reachable *only* through another node when every node is a root — so it
+ * is ignored rather than silently pruning shared prerequisites.
+ *
  * That one rule gives the right answer for every disclosure control:
  *
  *  - Collapsing X drops the prerequisites reachable *only* through X, while
@@ -133,14 +158,39 @@ export type VisibleGraphOptions = {
  *
  * `hiddenCounts` reports how many ancestors each surviving node is concealing,
  * for the "+12" badge on a collapsed node.
+ *
+ * `deepCutCounts` reports how many of a surviving node's *direct* prerequisites
+ * the deep-cut filter removed. Some required stories genuinely depend on
+ * optional ones — Born Again on Daredevil S3, Deadpool & Wolverine on Logan —
+ * so with deep cuts off those nodes would otherwise render as if they needed
+ * less setup than they do. Counting the cut edges keeps the omission visible
+ * instead of silently rewriting the prerequisite list.
  */
 export function visibleGraph(
-  destination: Story,
+  destination: Story | null,
   byId: Map<string, Story>,
   options: VisibleGraphOptions,
-): { ids: Set<string>; hiddenCounts: Map<string, number> } {
+): {
+  ids: Set<string>;
+  hiddenCounts: Map<string, number>;
+  deepCutCounts: Map<string, number>;
+} {
   const { showOptional, collapsed, hidden } = options;
   const ids = new Set<string>();
+
+  if (!destination) {
+    for (const story of byId.values()) {
+      if (!showOptional && story.optional) continue;
+      if (hidden?.has(story.id)) continue;
+      ids.add(story.id);
+    }
+    return {
+      ids,
+      hiddenCounts: new Map(),
+      deepCutCounts: deepCutCounts(ids, byId, options),
+    };
+  }
+
   const queue: string[] = [destination.id];
 
   while (queue.length) {
@@ -170,12 +220,43 @@ export function visibleGraph(
     if (concealed > 0) hiddenCounts.set(id, concealed);
   }
 
-  return { ids, hiddenCounts };
+  return {
+    ids,
+    hiddenCounts,
+    deepCutCounts: deepCutCounts(ids, byId, options),
+  };
+}
+
+/**
+ * Direct prerequisites that the deep-cut filter — and only the deep-cut filter —
+ * removed from each visible node. Nodes the reader collapsed or hid are excluded
+ * from the tally at source: their prerequisites are already reported by
+ * `hiddenCounts`, and counting them twice would double-report the same edges.
+ */
+function deepCutCounts(
+  ids: ReadonlySet<string>,
+  byId: Map<string, Story>,
+  { showOptional, collapsed, hidden }: VisibleGraphOptions,
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  if (showOptional) return counts;
+  for (const id of ids) {
+    if (collapsed?.has(id) || hidden?.has(id)) continue;
+    const story = byId.get(id);
+    if (!story) continue;
+    let cut = 0;
+    for (const dep of story.deps) {
+      if (ids.has(dep)) continue;
+      if (byId.get(dep)?.optional) cut += 1;
+    }
+    if (cut > 0) counts.set(id, cut);
+  }
+  return counts;
 }
 
 export function graphStories(
   stories: Story[],
-  selected: Story,
+  selected: Story | null,
   byId: Map<string, Story>,
   showOptional: boolean,
   options: Omit<VisibleGraphOptions, "showOptional"> = {},
@@ -315,10 +396,15 @@ export function columnLabel(
   column: Story[],
   index: number,
   lastIndex: number,
+  hasDestination = true,
 ): { title: string; detail: string } {
   const count = column.length;
   const titles = `${count} ${count === 1 ? "title" : "titles"}`;
-  if (index === lastIndex) return { title: "Destination", detail: "" };
+  // With the whole map on screen the last column is simply the deepest wave;
+  // calling it the destination would name a story the reader never chose.
+  if (index === lastIndex && hasDestination) {
+    return { title: "Destination", detail: "" };
+  }
   if (index === 0) return { title: "Origins", detail: titles };
 
   const years = column.map((story) => story.releaseYear);
@@ -406,6 +492,180 @@ export function orderColumns(
   }
 
   return best;
+}
+
+export type NodeTopOptions = {
+  /** Minimum vertical space between two cards in the same column. */
+  gap?: number;
+  /** Height used for a node that has not been measured yet. */
+  fallbackHeight?: number;
+  sweeps?: number;
+};
+
+/**
+ * Vertical placement of every node, in layout px.
+ *
+ * Packing each column from the top is what made the arrows unreadable: a node
+ * in column 4 sat at y=0 next to a prerequisite in column 3 that also sat at
+ * y=0, so dozens of long diagonals swept across the same band of empty canvas
+ * and you could not tell which line left which card.
+ *
+ * This is Sugiyama's third phase — coordinate assignment. Each sweep pulls a
+ * column's cards towards the mean position of the neighbours they are wired
+ * to, then packs them back apart so they never overlap:
+ *
+ *  - `desired` is the weighted mean centre of every already-placed neighbour,
+ *    near columns pulling harder than far ones, or the node's own current
+ *    centre when it has none — isolated nodes stay put instead of collapsing
+ *    back to the top.
+ *  - The pack is order-preserving: the column keeps the sequence orderColumns
+ *    chose to minimise crossings. Positioning must not undo that work.
+ *  - After packing, the whole column is shifted by the mean error, which
+ *    recovers the alignment that the downward-only packing pass gives away.
+ *
+ * Sweeps alternate direction and only the best-scoring configuration is kept,
+ * so the result is deterministic and never worse than the naive stack.
+ */
+export function assignNodeTops(
+  columns: readonly (readonly Story[])[],
+  edges: readonly GraphEdge[],
+  heights: ReadonlyMap<string, number>,
+  options: NodeTopOptions = {},
+): Map<string, number> {
+  const gap = options.gap ?? 14;
+  const fallback = options.fallbackHeight ?? 118;
+  const sweeps = options.sweeps ?? 8;
+  const height = (id: string) => heights.get(id) ?? fallback;
+
+  const incoming = new Map<string, string[]>();
+  const outgoing = new Map<string, string[]>();
+  for (const edge of edges) {
+    if (!incoming.has(edge.to)) incoming.set(edge.to, []);
+    incoming.get(edge.to)!.push(edge.from);
+    if (!outgoing.has(edge.from)) outgoing.set(edge.from, []);
+    outgoing.get(edge.from)!.push(edge.to);
+  }
+
+  /** Stacked from the top — the layout this function exists to improve on. */
+  const stack = () => {
+    const centres = new Map<string, number>();
+    for (const column of columns) {
+      let top = 0;
+      for (const story of column) {
+        centres.set(story.id, top + height(story.id) / 2);
+        top += height(story.id) + gap;
+      }
+    }
+    return centres;
+  };
+
+  /** Total vertical travel of every edge. Lower is a cleaner set of arrows. */
+  const score = (centres: ReadonlyMap<string, number>) => {
+    let total = 0;
+    for (const edge of edges) {
+      const from = centres.get(edge.from);
+      const to = centres.get(edge.to);
+      if (from === undefined || to === undefined) continue;
+      total += Math.abs(from - to);
+    }
+    return total;
+  };
+
+  const place = (
+    column: readonly Story[],
+    columnIndex: number,
+    centres: Map<string, number>,
+    neighbours: Map<string, string[]>,
+    settled: (id: string) => boolean,
+  ) => {
+    const desired = column.map((story, index) => {
+      let weight = 0;
+      let total = 0;
+      for (const id of neighbours.get(story.id) ?? []) {
+        if (!settled(id)) continue;
+        const centre = centres.get(id);
+        const at = columnOf.get(id);
+        if (centre === undefined || at === undefined) continue;
+        // Nearer columns pull harder: a neighbour one column away shares a
+        // stretch of canvas with this card, one five columns away does not.
+        const pull = 1 / Math.abs(at - columnIndex);
+        weight += pull;
+        total += centre * pull;
+      }
+      if (weight === 0) return { value: centres.get(story.id)!, wired: false };
+      return { value: total / weight, wired: true };
+    });
+
+    // Order-preserving pack: never move a card above the one before it.
+    const tops: number[] = [];
+    let limit = -Infinity;
+    column.forEach((story, index) => {
+      const top = Math.max(desired[index].value - height(story.id) / 2, limit);
+      tops.push(top);
+      limit = top + height(story.id) + gap;
+    });
+
+    // Downward-only packing drags the column away from its neighbours; shift
+    // it back by the mean error so the alignment survives.
+    let error = 0;
+    let wired = 0;
+    column.forEach((story, index) => {
+      if (!desired[index].wired) return;
+      wired += 1;
+      error += desired[index].value - (tops[index] + height(story.id) / 2);
+    });
+    const shift = wired ? error / wired : 0;
+    column.forEach((story, index) => {
+      centres.set(story.id, tops[index] + shift + height(story.id) / 2);
+    });
+  };
+
+  const columnOf = new Map<string, number>();
+  columns.forEach((column, index) => {
+    for (const story of column) columnOf.set(story.id, index);
+  });
+
+  let centres = stack();
+  let best = new Map(centres);
+  let bestScore = score(centres);
+
+  for (let sweep = 0; sweep < sweeps; sweep += 1) {
+    const forward = sweep % 2 === 0;
+    const order = forward
+      ? columns.map((_, index) => index).slice(1)
+      : columns.map((_, index) => index).slice(0, -1).reverse();
+    for (const index of order) {
+      // Every already-placed neighbour counts, not only the adjacent column.
+      // An edge that spans four columns is exactly the one that reads as an
+      // unexplained diagonal, so it has to have a say in where its ends sit.
+      place(columns[index], index, centres, forward ? incoming : outgoing, (id) => {
+        const at = columnOf.get(id);
+        return at !== undefined && (forward ? at < index : at > index);
+      });
+    }
+    const current = score(centres);
+    if (current < bestScore) {
+      bestScore = current;
+      best = new Map(centres);
+    }
+  }
+
+  // Normalise against the highest card on the canvas, so the map starts at the
+  // top of the stage rather than at whatever offset the sweeps drifted to.
+  const tops = new Map<string, number>();
+  let minTop = Infinity;
+  for (const column of columns) {
+    for (const story of column) {
+      minTop = Math.min(minTop, best.get(story.id)! - height(story.id) / 2);
+    }
+  }
+  if (!Number.isFinite(minTop)) minTop = 0;
+  for (const column of columns) {
+    for (const story of column) {
+      tops.set(story.id, best.get(story.id)! - height(story.id) / 2 - minTop);
+    }
+  }
+  return tops;
 }
 
 /*
@@ -501,7 +761,7 @@ export function parseUrlState(
   const kind = params.get("kind");
   return {
     destinationId:
-      destination && validIds.has(destination) ? destination : FEATURED_STORY_ID,
+      destination && validIds.has(destination) ? destination : ALL_STORIES_ID,
     view: view === "timeline" ? "timeline" : "graph",
     timelineMode: order === "story" ? "story" : DEFAULT_TIMELINE_MODE,
     kind:
@@ -512,7 +772,7 @@ export function parseUrlState(
 
 export function serializeUrlState(state: UrlState, pathname = ""): string {
   const params = new URLSearchParams();
-  if (state.destinationId !== FEATURED_STORY_ID)
+  if (state.destinationId !== ALL_STORIES_ID)
     params.set("to", state.destinationId);
   if (!pathname && state.view !== "graph") params.set("view", state.view);
   if (state.timelineMode !== DEFAULT_TIMELINE_MODE)
@@ -525,7 +785,7 @@ export function serializeUrlState(state: UrlState, pathname = ""): string {
 
 export function resetGraphState() {
   return {
-    selectedId: FEATURED_STORY_ID,
+    selectedId: ALL_STORIES_ID,
     kind: "All" as const,
     showOptional: DEFAULT_SHOW_OPTIONAL,
     query: "",
@@ -591,12 +851,24 @@ export function validateStories(
 }
 
 const WATCHED_STATE_VERSION = 1;
+const RECENT_STATE_VERSION = 1;
 
-export function parseWatchedState(
+/** Recent destinations are capped so the stored payload cannot grow forever. */
+export const MAX_RECENT_DESTINATIONS = 8;
+
+/**
+ * Shared reader for the versioned `{version, ids}` payloads in localStorage.
+ *
+ * Order is preserved exactly as stored. That matters: watched state is written
+ * sorted and read as a Set, but recents are a queue whose order *is* the data,
+ * so the parser must not reorder and the serializer sorts only on request.
+ */
+function parseIdList(
   raw: string | null,
   validIds: ReadonlySet<string>,
-): Set<string> {
-  if (!raw) return new Set();
+  version: number,
+): string[] {
+  if (!raw) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
     const ids =
@@ -606,21 +878,197 @@ export function parseWatchedState(
             typeof parsed === "object" &&
             "version" in parsed &&
             "ids" in parsed &&
-            (parsed as { version?: unknown }).version === WATCHED_STATE_VERSION &&
+            (parsed as { version?: unknown }).version === version &&
             Array.isArray((parsed as { ids?: unknown }).ids)
           ? (parsed as { ids: unknown[] }).ids
           : [];
-    return new Set(
-      ids.filter((id): id is string => typeof id === "string" && validIds.has(id)),
+    return ids.filter(
+      (id): id is string => typeof id === "string" && validIds.has(id),
     );
   } catch {
-    return new Set();
+    return [];
   }
 }
 
+function serializeIdList(
+  ids: Iterable<string>,
+  version: number,
+  sort: boolean,
+): string {
+  const list = [...ids];
+  return JSON.stringify({ version, ids: sort ? list.sort() : list });
+}
+
+export function parseWatchedState(
+  raw: string | null,
+  validIds: ReadonlySet<string>,
+): Set<string> {
+  return new Set(parseIdList(raw, validIds, WATCHED_STATE_VERSION));
+}
+
 export function serializeWatchedState(ids: ReadonlySet<string>): string {
-  return JSON.stringify({
-    version: WATCHED_STATE_VERSION,
-    ids: [...ids].sort(),
+  return serializeIdList(ids, WATCHED_STATE_VERSION, true);
+}
+
+/**
+ * Recently chosen destinations, newest first. Unlike the watched set this is
+ * ordered and deduplicated on write, so the order survives the round trip.
+ */
+export function parseRecentIds(
+  raw: string | null,
+  validIds: ReadonlySet<string>,
+): string[] {
+  return dedupe(parseIdList(raw, validIds, RECENT_STATE_VERSION)).slice(
+    0,
+    MAX_RECENT_DESTINATIONS,
+  );
+}
+
+export function serializeRecentIds(ids: readonly string[]): string {
+  return serializeIdList(
+    dedupe(ids).slice(0, MAX_RECENT_DESTINATIONS),
+    RECENT_STATE_VERSION,
+    false,
+  );
+}
+
+/**
+ * The single id behind the dock's "last watched" jump.
+ *
+ * Kept apart from the watched Set on purpose: that one is stored sorted, so it
+ * cannot answer "which one did you tick most recently".
+ */
+export function parseStoredId(
+  raw: string | null,
+  validIds: ReadonlySet<string>,
+): string | null {
+  return raw && validIds.has(raw) ? raw : null;
+}
+
+/** Push an id to the front, dropping any earlier occurrence. */
+export function pushRecentId(ids: readonly string[], id: string): string[] {
+  return dedupe([id, ...ids]).slice(0, MAX_RECENT_DESTINATIONS);
+}
+
+function dedupe(ids: readonly string[]): string[] {
+  return [...new Set(ids)];
+}
+
+/**
+ * Direct prerequisites and direct dependents of a node, restricted to what is
+ * currently on the map.
+ *
+ * Single source of truth for that derivation: the Inspector renders it as two
+ * lists of buttons, and the graph nodes render it as a screen-reader
+ * description. They must never disagree about what a node is connected to.
+ */
+export function nodeRelations(
+  id: string,
+  edges: readonly GraphEdge[],
+  visibleIds: ReadonlySet<string>,
+): { requires: string[]; unlocks: string[] } {
+  const requires: string[] = [];
+  const unlocks: string[] = [];
+  for (const edge of edges) {
+    if (edge.to === id && visibleIds.has(edge.from)) requires.push(edge.from);
+    if (edge.from === id && visibleIds.has(edge.to)) unlocks.push(edge.to);
+  }
+  return { requires, unlocks };
+}
+
+/**
+ * Sentence describing a node's place in the map, for `aria-describedby`.
+ *
+ * The graph itself is drawn as SVG paths and is hidden from assistive tech, so
+ * without this the arrows — the entire point of the product — carry no meaning.
+ */
+export function nodeSummary(
+  id: string,
+  byId: ReadonlyMap<string, Story>,
+  edges: readonly GraphEdge[],
+  visibleIds: ReadonlySet<string>,
+  position?: { column: number; columns: number },
+): string {
+  const { requires, unlocks } = nodeRelations(id, edges, visibleIds);
+  const name = (entry: string) => byId.get(entry)?.title ?? entry;
+  const parts: string[] = [];
+
+  parts.push(
+    requires.length
+      ? `Requires ${listPhrase(requires.map(name))}.`
+      : "Origin point — nothing is required first.",
+  );
+  if (unlocks.length) parts.push(`Sets up ${listPhrase(unlocks.map(name))}.`);
+  if (position) {
+    parts.push(`Column ${position.column} of ${position.columns}.`);
+  }
+  return parts.join(" ");
+}
+
+/**
+ * A linear, readable version of the whole dependency map.
+ *
+ * Rendered visually hidden after the canvas so a screen-reader user can read
+ * the answer end to end instead of tabbing 95 nodes to assemble it themselves.
+ */
+export function graphOutline(
+  columns: Story[][],
+  edges: readonly GraphEdge[],
+  byId: ReadonlyMap<string, Story>,
+  hasDestination = true,
+): Array<{
+  title: string;
+  detail: string;
+  items: Array<{
+    id: string;
+    title: string;
+    requires: string[];
+    unlocks: string[];
+  }>;
+}> {
+  const visibleIds = new Set(columns.flat().map(({ id }) => id));
+  const name = (entry: string) => byId.get(entry)?.title ?? entry;
+  return columns.map((column, index) => {
+    const label = columnLabel(column, index, columns.length - 1, hasDestination);
+    return {
+      title: label.title,
+      detail: label.detail,
+      items: column.map((story) => {
+        const { requires, unlocks } = nodeRelations(story.id, edges, visibleIds);
+        return {
+          id: story.id,
+          title: story.title,
+          requires: requires.map(name),
+          unlocks: unlocks.map(name),
+        };
+      }),
+    };
   });
+}
+
+/**
+ * Watched completion over an arbitrary set of stories.
+ *
+ * Deliberately takes the story list rather than reading a global: the timeline
+ * counts against what the user's filters actually show, so turning deep cuts
+ * off does not make the percentage drop for no visible reason. `graphMetrics`
+ * answers a different question — progress along one destination's path.
+ */
+export function watchedProgress(
+  stories: readonly Story[],
+  watched: ReadonlySet<string>,
+): { watched: number; total: number; percent: number } {
+  const total = stories.length;
+  const seen = stories.filter(({ id }) => watched.has(id)).length;
+  return {
+    watched: seen,
+    total,
+    percent: total === 0 ? 0 : Math.round((seen / total) * 100),
+  };
+}
+
+/** "A", "A and B", "A, B and C" — read aloud, commas alone are ambiguous. */
+function listPhrase(items: readonly string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }

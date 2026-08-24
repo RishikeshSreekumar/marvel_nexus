@@ -112,6 +112,149 @@ body::before {
   background-size: 43px 47px, 61px 59px;
 }
 
+/* Cinematic app opener. The moving typography evokes a comic-film title
+   sequence while using only original Nexus artwork and copy. */
+body.splash-active { overflow: hidden; }
+.nexus-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  background: #020204;
+  opacity: 1;
+  transition: opacity 700ms ease, visibility 700ms;
+}
+.nexus-splash.is-leaving { opacity: 0; visibility: hidden; }
+.splash-vignette {
+  position: absolute;
+  inset: -12%;
+  z-index: 5;
+  pointer-events: none;
+  background:
+    radial-gradient(circle, transparent 22%, rgba(0,0,0,.38) 58%, #000 86%),
+    linear-gradient(90deg, rgba(0,0,0,.62), transparent 28% 72%, rgba(0,0,0,.62));
+}
+.splash-reel {
+  position: absolute;
+  inset: -20%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(260px, 1fr));
+  gap: 2px;
+  transform: perspective(900px) rotateX(8deg) rotateZ(-8deg) scale(1.18);
+  animation: splash-camera 4.15s cubic-bezier(.18,.7,.22,1) both;
+}
+.splash-reel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,.2) 48%, transparent 52%);
+  transform: translateX(-110%);
+  animation: splash-scan 2.2s ease-out .25s both;
+}
+.splash-reel span {
+  --frame: 0;
+  min-height: 34vh;
+  display: grid;
+  place-items: center;
+  padding: 30px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.12);
+  color: rgba(255,255,255,.72);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.12), transparent 42%),
+    radial-gradient(circle at 70% 35%, rgba(241,42,51,.7), transparent 34%),
+    linear-gradient(145deg, #292d39, #080a0f 70%);
+  font: 800 clamp(38px, 6vw, 100px)/.8 var(--font-display);
+  letter-spacing: -.04em;
+  text-align: center;
+  text-shadow: 0 8px 28px #000;
+  opacity: 0;
+  transform: translateY(calc((var(--frame) - 2) * 18px)) scale(1.1);
+  animation: splash-frame 2.4s ease-out calc(var(--frame) * 110ms) both;
+}
+.splash-reel span:nth-child(2n) {
+  background:
+    linear-gradient(160deg, rgba(99,183,255,.28), transparent 38%),
+    radial-gradient(circle at 30% 62%, rgba(139,107,214,.7), transparent 35%),
+    #0a0c13;
+}
+.splash-reel span:nth-child(3n) {
+  background:
+    linear-gradient(140deg, rgba(230,182,94,.32), transparent 42%),
+    radial-gradient(circle at 62% 40%, rgba(200,16,26,.62), transparent 36%),
+    #09090d;
+}
+.splash-flare {
+  position: absolute;
+  z-index: 7;
+  width: 160vw;
+  height: 8px;
+  background: #fff;
+  box-shadow: 0 0 22px #fff, 0 0 70px #f12a33, 0 0 170px 45px rgba(241,42,51,.72);
+  opacity: 0;
+  transform: rotate(-7deg) scaleX(.05);
+  animation: splash-flare 1s cubic-bezier(.7,0,.25,1) 2.7s both;
+}
+.splash-title {
+  position: relative;
+  z-index: 8;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  opacity: 0;
+  transform: scale(1.8);
+  filter: blur(12px);
+  animation: splash-title-in 1.55s var(--ease-out) 3.2s forwards;
+}
+.splash-title .brand-lockup { --lockup-h: clamp(62px, 8.5vw, 116px); }
+.splash-presents,
+.splash-tagline {
+  color: rgba(255,255,255,.72);
+  font: 600 clamp(8px, 1vw, 12px) var(--font-mono);
+  letter-spacing: .38em;
+  text-indent: .38em;
+}
+.splash-tagline { color: #e6b65e; opacity: 0; animation: splash-copy-in 600ms ease 4.45s forwards; }
+.splash-skip {
+  position: absolute;
+  right: max(22px, 3vw);
+  bottom: max(20px, 3vw);
+  z-index: 10;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid rgba(255,255,255,.25);
+  background: transparent;
+  color: rgba(255,255,255,.64);
+  cursor: pointer;
+  font: 600 10px var(--font-mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  transition: color 160ms, border-color 160ms;
+}
+.splash-skip:hover { color: #fff; border-color: var(--color-red); }
+.splash-skip span { margin-left: 8px; color: var(--color-red); }
+
+@keyframes splash-camera {
+  0% { transform: perspective(900px) rotateX(8deg) rotateZ(-8deg) translate3d(-8%, -5%, 0) scale(1.4); filter: saturate(.25); }
+  72% { opacity: 1; filter: saturate(1.1); }
+  100% { transform: perspective(900px) rotateX(0) rotateZ(0) translate3d(5%, 3%, 360px) scale(2); opacity: 0; filter: saturate(.8) blur(8px); }
+}
+@keyframes splash-frame { 0% { opacity: 0; } 18%, 70% { opacity: 1; transform: none; } 100% { opacity: .2; transform: scale(1.16); } }
+@keyframes splash-scan { 0% { transform: translateX(-110%); } 100% { transform: translateX(110%); } }
+@keyframes splash-flare { 0% { opacity: 0; transform: rotate(-7deg) scaleX(.05); } 30% { opacity: 1; } 100% { opacity: 0; transform: rotate(-7deg) scaleX(1); } }
+@keyframes splash-title-in { 0% { opacity: 0; transform: scale(1.8); filter: blur(12px); } 100% { opacity: 1; transform: scale(1); filter: none; } }
+@keyframes splash-copy-in { to { opacity: 1; } }
+
+@media (max-width: 600px) {
+  .splash-reel { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+  .splash-title { width: 90vw; }
+  .splash-title .brand-lockup { --lockup-h: clamp(48px, 15vw, 76px); }
+  .splash-presents, .splash-tagline { letter-spacing: .2em; text-indent: .2em; }
+}
+
 .topbar {
   height: 76px;
   position: sticky;
@@ -297,56 +440,134 @@ body::before {
 }
 .secondary:hover { border-color: rgba(230,182,94,.55); transform: translateY(-2px); }
 
-.hero-orbit { min-height: 430px; position: relative; display: grid; place-items: center; }
-.hero-orbit::before {
-  content: "";
-  width: min(28vw, 420px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  position: absolute;
-  box-shadow: 0 0 110px rgba(241,42,51,.2), inset 0 0 70px rgba(241,42,51,.08);
-  border: 1px solid rgba(241,42,51,.32);
-}
-.orbit {
-  position: absolute;
-  border: 1px solid #2d3037;
-  border-radius: 50%;
-  animation: spin 40s linear infinite;
-}
-.orbit span {
-  position: absolute;
-  width: 9px;
-  height: 9px;
-  top: 50%;
-  left: -5px;
-  border-radius: 50%;
-  background: var(--red);
-  box-shadow: 0 0 20px var(--red);
-}
-.orbit-a { width: min(37vw, 560px); aspect-ratio: 1; }
-.orbit-b { width: min(46vw, 690px); aspect-ratio: 1; animation-direction: reverse; animation-duration: 65s; border-style: dashed; opacity: .65; }
-.orbit-b span { background: var(--gold); box-shadow: 0 0 18px var(--gold); }
-.arc-core {
+/* The hero's multiverse diagram. One sacred timeline, four branches peeling
+   off it at nexus events — the same shape the dependency map draws, at poster
+   scale. Everything here is vector and CSS: no images to ship or lay out. */
+.multiverse-showcase {
+  min-height: 510px;
   position: relative;
-  text-align: center;
-  color: #fff;
-  text-shadow: 0 0 36px rgba(255,255,255,.16);
-  font: 700 clamp(74px, 7vw, 118px)/.75 var(--font-display);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  isolation: isolate;
 }
-.arc-core span { display: block; margin-top: 18px; color: var(--red); letter-spacing: .55em; font: 700 9px var(--font-mono); }
-.orbit-label {
+.multiverse-glow {
   position: absolute;
-  padding: 5px 8px;
-  color: #a6a7ac;
-  background: #0b0c0f;
-  border: 1px solid #2c2e34;
-  letter-spacing: .16em;
-  font: 8px var(--font-mono);
+  inset: 8% 6%;
+  z-index: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(241,42,51,.20), transparent 62%),
+    radial-gradient(circle at 62% 24%, rgba(99,183,255,.14), transparent 58%);
+  filter: blur(6px);
+  animation: multiverse-breathe 6s ease-in-out infinite;
 }
-.orbit-label.one { top: 10%; right: 15%; }
-.orbit-label.two { bottom: 12%; left: 7%; }
-.orbit-label.three { top: 51%; right: 0; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.multiverse-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: .5;
+  background:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(circle at 50% 50%, #000 34%, transparent 74%);
+  animation: multiverse-drift 9s linear infinite;
+}
+.multiverse-canvas {
+  width: min(100%, 540px);
+  height: auto;
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+  fill: none;
+}
+
+/* The trunk. The flow copy is a single travelling dash on the same path, so
+   the two can never fall out of register. */
+.multiverse-trunk {
+  stroke: rgba(230,182,94,.42);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.multiverse-trunk-flow {
+  stroke: var(--gold);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-dasharray: 46 640;
+  filter: drop-shadow(0 0 7px rgba(230,182,94,.7));
+  animation: multiverse-flow 5.5s linear infinite;
+}
+
+.branch-line {
+  stroke: rgba(241,42,51,.62);
+  stroke-width: 1.6;
+  stroke-dasharray: 320;
+  stroke-dashoffset: 320;
+  filter: drop-shadow(0 0 6px rgba(241,42,51,.35));
+  animation: multiverse-branch 5.4s var(--ease-out) var(--branch-delay, 0ms) infinite;
+}
+.branch-halo {
+  fill: rgba(241,42,51,.08);
+  stroke: rgba(241,42,51,.18);
+  stroke-width: 1;
+  animation: multiverse-breathe 4.4s ease-in-out var(--branch-delay, 0ms) infinite;
+}
+/* transform-box keeps the spin about the ring's own centre rather than the
+   svg origin, which would swing it across the canvas. */
+.branch-ring {
+  stroke: rgba(215,233,255,.55);
+  stroke-width: 1;
+  stroke-dasharray: 5 7;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: multiverse-spin 14s linear infinite;
+}
+.branch-core {
+  fill: #ffe9ea;
+  filter: drop-shadow(0 0 9px var(--red));
+}
+.branch-label {
+  fill: var(--color-text);
+  font: 700 11px var(--font-mono);
+  letter-spacing: .12em;
+}
+.branch-note {
+  fill: #8b909b;
+  font: 500 7.5px var(--font-mono);
+  letter-spacing: .18em;
+}
+
+/* Nexus events: where a branch leaves the timeline. */
+.multiverse-nexus {
+  fill: #0a0d13;
+  stroke: var(--gold);
+  stroke-width: 1.4;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: rotate(45deg);
+  animation: multiverse-nexus 4.4s ease-in-out var(--branch-delay, 0ms) infinite;
+}
+.multiverse-spine-label {
+  fill: #767b86;
+  font: 600 8px var(--font-mono);
+  letter-spacing: .22em;
+}
+
+.showcase-caption { position: absolute; right: 1%; bottom: 4%; color: #9a9da6; font: 600 8px var(--font-mono); letter-spacing: .2em; }
+.showcase-caption i { width: 28px; height: 1px; display: inline-block; margin-right: 9px; vertical-align: middle; background: var(--red); box-shadow: 0 0 10px var(--red); }
+.showcase-caption span { margin-left: 12px; color: var(--gold); }
+
+@keyframes multiverse-flow { to { stroke-dashoffset: -686; } }
+@keyframes multiverse-branch {
+  0% { stroke-dashoffset: 320; opacity: .15; }
+  22%, 74% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: .3; }
+}
+@keyframes multiverse-spin { to { transform: rotate(360deg); } }
+@keyframes multiverse-breathe { 50% { opacity: .55; transform: scale(1.06); } }
+@keyframes multiverse-drift { to { background-position: 34px 34px; } }
+@keyframes multiverse-nexus { 50% { transform: rotate(45deg) scale(1.5); stroke: var(--red); } }
 
 .workspace {
   background:
@@ -515,6 +736,15 @@ body::before {
 .column-label b { display: block; color: var(--color-text); font-weight: 600; }
 .column-label i { color: #6f7480; font-style: normal; }
 .column-nodes { display: flex; flex-direction: column; padding: 18px; }
+/* Containing block for .node-collapse, which is a sibling of the node button
+   rather than a child — an interactive element nested inside a <button> is
+   invalid and is flattened out of the accessibility tree by some readers.
+   The hover lift lives here so the badge travels with the card. */
+.story-node-wrap {
+  position: relative;
+  transition: transform var(--duration-fast);
+}
+.story-node-wrap:hover { transform: translateY(-3px) scale(1.012); }
 .story-node {
   width: 100%;
   min-height: 104px;
@@ -543,7 +773,7 @@ body::before {
 }
 .story-node:hover .story-artwork-backdrop,
 .story-node.destination .story-artwork-backdrop { opacity: .28; }
-.story-node:hover { border-color: var(--color-line-strong); transform: translateY(-3px) scale(1.012); box-shadow: 0 14px 30px rgba(0,0,0,.26); }
+.story-node:hover { border-color: var(--color-line-strong); box-shadow: 0 14px 30px rgba(0,0,0,.26); }
 /* Left edge encodes the saga lane; a dashed edge means deep cut. Colour is
    never the only channel — .node-bottom prints the lane name too. */
 .story-node[data-lane="Infinity"] { border-left-color: var(--lane-infinity); }
@@ -566,6 +796,7 @@ body::before {
   z-index: 2;
   top: 8px;
   right: 8px;
+  cursor: pointer;
   min-width: 22px;
   height: 18px;
   display: grid;
@@ -583,6 +814,10 @@ body::before {
 .graph-actions .toggle-on { color: var(--color-red); }
 .node-bottom > i { width: 17px; height: 17px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: #292c33; font-style: normal; font-size: 7px; }
 .story-node.destination .node-bottom > i { background: var(--red); }
+/* Deep-cut prerequisites the current filter is withholding. Sits beside the
+   lane name rather than at the far edge, so the node's own dependency count
+   keeps the right-hand slot it has when nothing is being withheld. */
+.node-deep-cut { margin: 0 auto 0 5px; padding: 1px 4px; border: 1px solid rgba(223,180,86,.35); border-radius: 999px; color: var(--gold); font-style: normal; font-size: 7px; letter-spacing: .06em; }
 
 .inspector {
   position: relative;
@@ -862,7 +1097,8 @@ footer > span { justify-self: end; color: #4f525a; letter-spacing: .12em; font: 
   box-shadow: 0 35px 110px #000;
   animation: modal-panel 440ms var(--ease-spring) both;
 }
-.search-input { height: 70px; display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 6px; padding: 0 19px; border-bottom: 1px solid #30333a; }
+/* Four tracks: icon, field, clear (only present with a query), ESC. */
+.search-input { height: 70px; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; align-items: center; gap: 6px; padding: 0 19px; border-bottom: 1px solid #30333a; }
 .search-input input { width: 100%; border: 0; background: transparent; color: #fff; font: 500 22px var(--font-display); text-transform: uppercase; }
 .search-input input:focus,
 .search-input input:focus-visible { outline: 0; box-shadow: none; }
@@ -952,12 +1188,10 @@ button:hover .story-artwork img,
   .search-trigger { font-size: 0; }
   .hero { min-height: auto; grid-template-columns: 1fr; padding: 65px 24px 35px; }
   .hero-copy,
-  .hero-orbit { min-width: 0; }
+  .multiverse-showcase { min-width: 0; }
   .hero h1 { font-size: clamp(54px, 15vw, 86px); }
-  .hero-orbit { min-height: 350px; }
-  .orbit-a { width: 340px; }
-  .orbit-b { width: 440px; }
-  .hero-orbit::before { width: 260px; }
+  .multiverse-showcase { min-height: 400px; margin-top: 18px; }
+  .multiverse-canvas { width: min(92vw, 440px); }
   .workspace { padding: 55px 16px 70px; }
   .workspace-head { display: block; }
   .workspace-controls { margin-top: 24px; align-items: flex-start; flex-direction: column; }
@@ -974,15 +1208,34 @@ button:hover .story-artwork img,
   .hero-actions { align-items: stretch; flex-direction: column; }
   .primary, .secondary { width: 100%; }
   .primary { display: flex; align-items: center; justify-content: space-between; }
-  .graph-legend span:nth-child(2), .graph-legend span:nth-child(3) { display: none; }
-  /* Scrolls rather than disappearing — the lane colours are the key to the map. */
+  /* Every legend key stays: "Deep cut" and "Watched" are states the map still
+     renders at this width, so hiding their keys leaves them unexplained.
+     The legend wraps instead. */
   .graph-legend { flex-wrap: wrap; }
   .lane-key { max-width: 100%; overflow-x: auto; }
   .graph-shell { margin-inline: -16px; border-left: 0; border-right: 0; }
   /* Retuning the tracks moves the spine and the tick together. */
   .timeline-shell { --dates-col: 1px; --gutter-col: 28px; --index-col: 0px; }
-  .timeline-dates, .timeline-number { display: none; }
-  .timeline-card { padding-right: 5px; }
+  /* The dates must NOT be hidden here. The Release/Story toggle works by moving
+     .active between these two spans, so hiding them makes the control look
+     broken. There is no room for the 155px right-aligned column at this width,
+     so they move above the card as a compact row instead. */
+  .timeline-number { display: none; }
+  .timeline-item { grid-template-rows: auto auto; }
+  .timeline-check { grid-row: 1 / span 2; }
+  .timeline-dates {
+    grid-column: 3;
+    grid-row: 1;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 0 0 8px 8px;
+  }
+  .timeline-dates > span { max-width: none; padding: 4px 7px; text-align: left; }
+  .timeline-dates small { display: inline; margin: 0 4px 0 0; }
+  /* translateX reads as jitter once the chips sit in a row. */
+  .timeline-dates > span.active { transform: none; }
+  .timeline-card { grid-row: 2; padding-right: 5px; }
   .method-grid { grid-template-columns: 1fr; }
   .method-grid > div { min-height: 150px; }
   .method-grid h3 { margin-top: 25px; }
@@ -1006,7 +1259,7 @@ button:hover .story-artwork img,
   width: 1px; height: 1px; position: absolute; overflow: hidden;
   clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
 }
-.hero-orbit { pointer-events: none; opacity: .88; }
+.multiverse-showcase { opacity: .96; }
 .graph-map { min-width: 0; position: relative; overflow: hidden; }
 /* A normal flex child of .graph-actions, not an overlay on the canvas. */
 .graph-toolbar {
@@ -1051,6 +1304,9 @@ button:hover .story-artwork img,
   overscroll-behavior: contain;
   box-shadow: inset -18px 0 24px -24px rgba(255,255,255,.35);
   cursor: grab;
+  /* One finger keeps native panning; the two-finger gesture is handed to the
+     pinch handler instead of page-zooming the document. */
+  touch-action: pan-x pan-y;
 }
 /* user-select is what stops a drag from selecting node titles. */
 .graph-scroll.is-panning {
@@ -1090,6 +1346,12 @@ button:hover .story-artwork img,
 .nx-arrow-active path { fill: var(--color-red); }
 .nx-arrow-muted path { fill: #525865; opacity: .075; }
 
+/* The tail dot. Same palette as the head it belongs to, so a line reads as one
+   object: dot at the story you watch first, arrow at the one it sets up. */
+.nx-dot circle { fill: #525865; }
+.nx-dot-active circle { fill: var(--color-red); }
+.nx-dot-muted circle { fill: #525865; opacity: .075; }
+
 /* Above the columns (which are z-index 1) so edges are hoverable at all. The
    svg itself takes no pointer events; only the fat invisible strokes do. */
 .graph-edges-hit {
@@ -1123,6 +1385,10 @@ button:hover .story-artwork img,
   font: 11px var(--font-mono);
 }
 .edge-tooltip b { color: var(--color-text); font-weight: 600; }
+/* Always mounted, shown by attribute — mounting it from React state re-rendered
+   the whole map on every edge hover. */
+.edge-tooltip { visibility: hidden; }
+.edge-tooltip[data-visible] { visibility: visible; }
 .graph-column { z-index: 1; border-right-color: rgba(215,223,238,.08); }
 .story-node.filtered { filter: saturate(.25); }
 .column-label, .node-top, .node-bottom, .kind-badge, .deep-badge, .future-badge,
@@ -1326,9 +1592,9 @@ footer p, footer > span { color: #9197a2; font-size: 11px; }
     gap: 6px;
   }
   .view-switch a {
-    padding-inline: 9px;
-    font-size: 8px;
-    letter-spacing: .07em;
+    padding-inline: 10px;
+    font-size: 10px;
+    letter-spacing: .06em;
   }
   .page-graph .workspace-head h2,
   .page-timeline .workspace-head h2 { font-size: clamp(38px, 8vw, 58px); }
@@ -1472,17 +1738,14 @@ body { overflow-x: hidden; }
     display: flex;
     justify-self: end;
   }
+  /* The real link text, not a ::after substitute: font-size:0 plus generated
+     content hides the accessible name from some screen readers, and the label
+     is identical either way. */
   .workspace-topbar .view-switch a {
     min-height: 34px;
     padding-inline: 10px;
-    font-size: 0;
+    font-size: 10px;
   }
-  .workspace-topbar .view-switch a::after {
-    font-size: 9px;
-    letter-spacing: .08em;
-  }
-  .workspace-topbar .view-switch a[href="/graph"]::after { content: "GRAPH"; }
-  .workspace-topbar .view-switch a[href="/timeline"]::after { content: "TIMELINE"; }
   .page-graph .workspace-head,
   .page-timeline .workspace-head {
     margin-inline: -16px;
@@ -1580,9 +1843,8 @@ body { overflow-x: hidden; }
   .workspace-topbar .view-switch a[href="/graph"],
   .workspace-topbar .view-switch a[href="/timeline"] {
     padding-inline: 12px;
-    font-size: 9px;
+    font-size: 10px;
   }
-  .workspace-topbar .view-switch a::after { content: none !important; }
 }
 
 @media (max-width: 600px) {
@@ -1626,9 +1888,11 @@ body { overflow-x: hidden; }
     min-height: 440px;
   }
   /* The canvas is only ~440px tall on a phone; the minimap would eat it, so
-     hide the control too rather than leaving a button that does nothing. */
+     hide the control too rather than leaving a button that does nothing.
+     Targeted by attribute, not :last-child — a positional selector silently
+     hides whichever button happens to be last if the toolbar is reordered. */
   .graph-minimap,
-  .graph-toolbar button:last-child { display: none; }
+  .graph-toolbar button[data-toolbar="minimap"] { display: none; }
   .graph-legend { gap: 12px; }
   .graph-actions { gap: 10px; }
   .inspector { width: 100%; }
@@ -1641,9 +1905,269 @@ body { overflow-x: hidden; }
   }
   .search-modal { padding: 10px; }
   .search-input {
-    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-columns: 28px minmax(0, 1fr) auto auto;
     padding-inline: 12px;
   }
   .search-input input { min-width: 0; font-size: 18px; }
   .search-results { max-height: calc(100dvh - 130px); }
+}
+
+/* Touch targets. Scoped to coarse pointers so desktop density is untouched;
+   placed last so it wins over the 32px/34px sizes set in the width queries. */
+@media (pointer: coarse) {
+  .graph-toolbar button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .view-switch a,
+  .workspace-topbar .view-switch a { min-height: 44px; }
+  /* The tick keeps its 20px visual — it is centred on the spine by
+     construction — and gains an invisible hit area around it instead. */
+  .timeline-check::before {
+    content: "";
+    position: absolute;
+    inset: -12px;
+  }
+}
+
+/* Skip link. Fixed rather than in-flow so it cannot claim a .topbar grid
+   track, and above the sticky header's stacking so it is visible when focused. */
+.skip-link {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  padding: 10px 16px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-xs);
+  background: var(--color-canvas);
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font: 600 11px var(--font-mono);
+  text-decoration: none;
+  transform: translateY(-150%);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.skip-link:focus-visible {
+  transform: translateY(8px) translateX(8px);
+}
+
+/* Empty and clear states for the destination palette. Before these, an
+   unmatched query rendered a blank box under a "0 STORIES" label. */
+.search-empty {
+  padding: 34px 22px 40px;
+  color: var(--color-text-soft);
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.search-empty p { margin: 0 0 10px; }
+.search-empty p:last-child { margin-bottom: 0; }
+.search-empty b { color: var(--color-text); }
+.search-empty button {
+  padding: 7px 12px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--color-gold);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font: 600 9px var(--font-mono);
+}
+.search-empty button:hover { border-color: var(--color-gold); color: #fff; }
+.search-clear {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 15px !important;
+  line-height: 1;
+}
+/* Transparent background so the nowrap/ellipsis on the result title is not
+   disturbed by a highlight box. */
+.search-results mark {
+  background: transparent;
+  color: var(--color-red);
+  font-weight: 700;
+}
+
+/* Floating status dock. Replaces the vertical progress rail: the figures read
+   better as text than as a filled track, and a bar could not carry the two
+   controls a reader wants after scrolling half a chronology. */
+.status-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(94vw, 720px);
+  padding: 8px 10px 8px 16px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 999px;
+  background: rgba(8, 11, 17, .93);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .55);
+  transform: translateX(-50%);
+}
+.status-dock-text {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  color: var(--color-text-soft);
+  white-space: nowrap;
+  font: 500 11px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.status-dock-text b { color: var(--color-text); font-weight: 700; }
+.status-dock-text i {
+  width: 1px;
+  height: 12px;
+  background: var(--color-line-strong);
+}
+.status-dock-position { color: var(--color-text); }
+.status-dock-percent { color: #6fb37d; font-weight: 700; }
+
+.status-dock-actions { display: flex; align-items: center; gap: 6px; }
+.status-dock-actions button {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: rgba(24, 29, 39, .8);
+  color: var(--color-text-soft);
+  cursor: pointer;
+  white-space: nowrap;
+  letter-spacing: .06em;
+  font: 700 10px var(--font-mono);
+  text-transform: uppercase;
+  transition: border-color var(--duration-fast), background var(--duration-fast), color var(--duration-fast);
+}
+.status-dock-actions button:hover:not(:disabled) {
+  border-color: rgba(241, 42, 51, .55);
+  background: rgba(241, 42, 51, .12);
+  color: var(--color-text);
+}
+/* Disabled rather than hidden: the control keeps its place, and its title says
+   why it cannot be used yet. */
+.status-dock-actions button:disabled { opacity: .38; cursor: not-allowed; }
+.status-dock-actions button span { margin-right: 5px; }
+
+/* The dock floats over the end of the page, so the page has to end above it. */
+.page-timeline #nexus-main { padding-bottom: 64px; }
+
+@media (max-width: 900px) {
+  .status-dock {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    transform: none;
+  }
+  .status-dock-text { justify-content: center; }
+  .status-dock-actions { justify-content: center; }
+  .status-dock-actions button { flex: 1; justify-content: center; padding: 0 8px; }
+}
+
+@media (max-width: 600px) {
+  /* Two lines of controls beat a horizontal scroll on a 360px screen. */
+  .status-dock-actions { flex-wrap: wrap; }
+  .status-dock-actions button { font-size: 9px; }
+}
+
+/* Empty chronology — previously an unexplained blank spine. */
+.timeline-empty {
+  padding: 70px 20px;
+  color: var(--color-text-soft);
+  text-align: center;
+}
+.timeline-empty p { margin: 0 0 10px; font-size: 14px; }
+.timeline-empty b { color: var(--color-text); }
+.timeline-empty button {
+  margin-top: 10px;
+  padding: 9px 16px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--color-gold);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font: 600 10px var(--font-mono);
+}
+.timeline-empty button:hover { border-color: var(--color-gold); color: #fff; }
+
+/* The card's clickable surface is this link's overlay, so the watched toggle
+   stays a sibling rather than being nested inside an interactive element. */
+.timeline-card { position: relative; }
+.timeline-card-link { color: inherit; text-decoration: none; }
+.timeline-card-link::after { content: ""; position: absolute; inset: 0; }
+.timeline-card-link:focus-visible { outline: none; }
+.timeline-card:has(.timeline-card-link:focus-visible) {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 3px;
+}
+
+
+/* Render-crash fallback. Deliberately plain: it has to work when the rest of
+   the component tree does not. */
+.nexus-error {
+  margin: 40px auto;
+  max-width: 520px;
+  padding: 28px 24px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-soft);
+  text-align: center;
+  font-size: 13px;
+}
+.nexus-error b { color: var(--color-text); }
+.nexus-error p { margin: 0 0 10px; }
+.nexus-error button {
+  margin-top: 8px;
+  padding: 9px 18px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--color-gold);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font: 600 10px var(--font-mono);
+}
+
+/* Poster shimmer while the Wikipedia lookup is in flight. The monogram already
+   holds the box, so this only signals that something is still coming. */
+.story-artwork.is-loading::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(255, 255, 255, .07) 50%,
+    transparent 80%
+  );
+  background-size: 220% 100%;
+  animation: artwork-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes artwork-shimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-artwork.is-loading::before { animation: none; }
 }
