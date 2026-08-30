@@ -112,8 +112,9 @@ body::before {
   background-size: 43px 47px, 61px 59px;
 }
 
-/* Cinematic app opener. The moving typography evokes a comic-film title
-   sequence while using only original Nexus artwork and copy. */
+/* Marvel Studios-style opener, under three seconds. The giant white wordmark
+   zooms out on black, a flash floods the screen red, and the mark settles
+   into the white-on-red studio title card with NEXUS between rules. */
 body.splash-active { overflow: hidden; }
 .nexus-splash {
   position: fixed;
@@ -123,101 +124,61 @@ body.splash-active { overflow: hidden; }
   place-items: center;
   overflow: hidden;
   isolation: isolate;
-  background: #020204;
+  background: #050505;
   opacity: 1;
-  transition: opacity 700ms ease, visibility 700ms;
+  transition: opacity 500ms ease, visibility 500ms;
 }
 .nexus-splash.is-leaving { opacity: 0; visibility: hidden; }
-.splash-vignette {
-  position: absolute;
-  inset: -12%;
-  z-index: 5;
-  pointer-events: none;
-  background:
-    radial-gradient(circle, transparent 22%, rgba(0,0,0,.38) 58%, #000 86%),
-    linear-gradient(90deg, rgba(0,0,0,.62), transparent 28% 72%, rgba(0,0,0,.62));
-}
-.splash-reel {
-  position: absolute;
-  inset: -20%;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(260px, 1fr));
-  gap: 2px;
-  transform: perspective(900px) rotateX(8deg) rotateZ(-8deg) scale(1.18);
-  animation: splash-camera 4.15s cubic-bezier(.18,.7,.22,1) both;
-}
-.splash-reel::after {
-  content: "";
+/* Red flood behind the mark, arriving with the flash. */
+.splash-red {
   position: absolute;
   inset: 0;
-  background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,.2) 48%, transparent 52%);
-  transform: translateX(-110%);
-  animation: splash-scan 2.2s ease-out .25s both;
-}
-.splash-reel span {
-  --frame: 0;
-  min-height: 34vh;
-  display: grid;
-  place-items: center;
-  padding: 30px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,.12);
-  color: rgba(255,255,255,.72);
-  background:
-    linear-gradient(135deg, rgba(255,255,255,.12), transparent 42%),
-    radial-gradient(circle at 70% 35%, rgba(241,42,51,.7), transparent 34%),
-    linear-gradient(145deg, #292d39, #080a0f 70%);
-  font: 800 clamp(38px, 6vw, 100px)/.8 var(--font-display);
-  letter-spacing: -.04em;
-  text-align: center;
-  text-shadow: 0 8px 28px #000;
+  background: radial-gradient(120% 90% at 50% 42%, #f12a33 0%, #d01722 55%, #8f0b14 100%);
   opacity: 0;
-  transform: translateY(calc((var(--frame) - 2) * 18px)) scale(1.1);
-  animation: splash-frame 2.4s ease-out calc(var(--frame) * 110ms) both;
+  animation: splash-red-in 480ms ease-out 1.18s forwards;
 }
-.splash-reel span:nth-child(2n) {
-  background:
-    linear-gradient(160deg, rgba(99,183,255,.28), transparent 38%),
-    radial-gradient(circle at 30% 62%, rgba(139,107,214,.7), transparent 35%),
-    #0a0c13;
-}
-.splash-reel span:nth-child(3n) {
-  background:
-    linear-gradient(140deg, rgba(230,182,94,.32), transparent 42%),
-    radial-gradient(circle at 62% 40%, rgba(200,16,26,.62), transparent 36%),
-    #09090d;
-}
-.splash-flare {
+.splash-flash {
   position: absolute;
-  z-index: 7;
-  width: 160vw;
-  height: 8px;
+  inset: 0;
+  z-index: 3;
   background: #fff;
-  box-shadow: 0 0 22px #fff, 0 0 70px #f12a33, 0 0 170px 45px rgba(241,42,51,.72);
   opacity: 0;
-  transform: rotate(-7deg) scaleX(.05);
-  animation: splash-flare 1s cubic-bezier(.7,0,.25,1) 2.7s both;
+  pointer-events: none;
+  animation: splash-flash 340ms ease-out 1.1s;
 }
-.splash-title {
+.splash-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 45%, transparent 40%, rgba(0,0,0,.42) 100%);
+}
+.splash-mark {
   position: relative;
-  z-index: 8;
+  z-index: 5;
   display: grid;
   justify-items: center;
-  gap: 18px;
+  transform: scale(1.6);
+  animation: splash-zoom 2.45s cubic-bezier(.16,.84,.3,1) both;
+}
+.splash-marvel {
+  display: block;
+  color: #fff;
+  font: 900 clamp(64px, 17vw, 210px)/.92 var(--font-display), "Arial Narrow", sans-serif;
+  letter-spacing: -.015em;
+}
+.splash-nexus {
+  margin-top: clamp(10px, 1.6vw, 20px);
+  padding: clamp(5px, .7vw, 10px) 0;
+  border-top: clamp(2px, .3vw, 4px) solid #fff;
+  border-bottom: clamp(2px, .3vw, 4px) solid #fff;
+  color: #fff;
+  font: 700 clamp(20px, 4.6vw, 56px)/1 var(--font-display), "Arial Narrow", sans-serif;
+  letter-spacing: .58em;
+  text-indent: .58em;
   opacity: 0;
-  transform: scale(1.8);
-  filter: blur(12px);
-  animation: splash-title-in 1.55s var(--ease-out) 3.2s forwards;
+  animation: splash-copy-in 380ms ease-out 1.42s forwards;
 }
-.splash-title .brand-lockup { --lockup-h: clamp(62px, 8.5vw, 116px); }
-.splash-presents,
-.splash-tagline {
-  color: rgba(255,255,255,.72);
-  font: 600 clamp(8px, 1vw, 12px) var(--font-mono);
-  letter-spacing: .38em;
-  text-indent: .38em;
-}
-.splash-tagline { color: #e6b65e; opacity: 0; animation: splash-copy-in 600ms ease 4.45s forwards; }
 .splash-skip {
   position: absolute;
   right: max(22px, 3vw);
@@ -237,22 +198,20 @@ body.splash-active { overflow: hidden; }
 .splash-skip:hover { color: #fff; border-color: var(--color-red); }
 .splash-skip span { margin-left: 8px; color: var(--color-red); }
 
-@keyframes splash-camera {
-  0% { transform: perspective(900px) rotateX(8deg) rotateZ(-8deg) translate3d(-8%, -5%, 0) scale(1.4); filter: saturate(.25); }
-  72% { opacity: 1; filter: saturate(1.1); }
-  100% { transform: perspective(900px) rotateX(0) rotateZ(0) translate3d(5%, 3%, 360px) scale(2); opacity: 0; filter: saturate(.8) blur(8px); }
-}
-@keyframes splash-frame { 0% { opacity: 0; } 18%, 70% { opacity: 1; transform: none; } 100% { opacity: .2; transform: scale(1.16); } }
-@keyframes splash-scan { 0% { transform: translateX(-110%); } 100% { transform: translateX(110%); } }
-@keyframes splash-flare { 0% { opacity: 0; transform: rotate(-7deg) scaleX(.05); } 30% { opacity: 1; } 100% { opacity: 0; transform: rotate(-7deg) scaleX(1); } }
-@keyframes splash-title-in { 0% { opacity: 0; transform: scale(1.8); filter: blur(12px); } 100% { opacity: 1; transform: scale(1); filter: none; } }
+@keyframes splash-zoom { 0% { transform: scale(1.6); } 100% { transform: scale(1); } }
+@keyframes splash-flash { 0% { opacity: 0; } 22% { opacity: .95; } 100% { opacity: 0; } }
+@keyframes splash-red-in { to { opacity: 1; } }
 @keyframes splash-copy-in { to { opacity: 1; } }
 
 @media (max-width: 600px) {
-  .splash-reel { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
-  .splash-title { width: 90vw; }
-  .splash-title .brand-lockup { --lockup-h: clamp(48px, 15vw, 76px); }
-  .splash-presents, .splash-tagline { letter-spacing: .2em; text-indent: .2em; }
+  .splash-nexus { letter-spacing: .42em; text-indent: .42em; }
+}
+
+/* With reduced motion the card renders in its final state immediately. */
+@media (prefers-reduced-motion: reduce) {
+  .splash-red, .splash-nexus { animation: none; opacity: 1; }
+  .splash-mark { animation: none; transform: none; }
+  .splash-flash { animation: none; opacity: 0; }
 }
 
 .topbar {
@@ -440,26 +399,28 @@ body.splash-active { overflow: hidden; }
 }
 .secondary:hover { border-color: rgba(230,182,94,.55); transform: translateY(-2px); }
 
-/* The hero's multiverse diagram. One sacred timeline, four branches peeling
-   off it at nexus events — the same shape the dependency map draws, at poster
-   scale. Everything here is vector and CSS: no images to ship or lay out. */
+/* The hero's Yggdrasil. Loki at the End of Time holding the timelines: one
+   trunk rising out of his hands, one bough per saga lane, with thickness and
+   fill taken straight from the story data. The tree is also navigation — each
+   bough is a link into the graph. Everything here is vector and CSS: no images
+   to ship or lay out. */
 .multiverse-showcase {
   min-height: 510px;
   position: relative;
   display: grid;
   place-items: center;
-  pointer-events: none;
   isolation: isolate;
 }
 .multiverse-glow {
   position: absolute;
-  inset: 8% 6%;
+  inset: 4%;
   z-index: 0;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 50% 46%, rgba(241,42,51,.20), transparent 62%),
-    radial-gradient(circle at 62% 24%, rgba(99,183,255,.14), transparent 58%);
-  filter: blur(6px);
+    radial-gradient(circle at 50% 80%, rgba(230,182,94,.20), transparent 50%),
+    radial-gradient(circle at 50% 34%, rgba(139,107,214,.17), transparent 62%),
+    radial-gradient(circle at 68% 20%, rgba(99,183,255,.11), transparent 58%);
+  filter: blur(8px);
   animation: multiverse-breathe 6s ease-in-out infinite;
 }
 .multiverse-grid {
@@ -474,13 +435,65 @@ body.splash-active { overflow: hidden; }
   mask-image: radial-gradient(circle at 50% 50%, #000 34%, transparent 74%);
   animation: multiverse-drift 9s linear infinite;
 }
-.multiverse-canvas {
-  width: min(100%, 540px);
-  height: auto;
+/* The stage owns the footprint; the SVG fills it and the particle canvas is
+   pinned over it, so both draw in the same 480×540 coordinate space. */
+.yggdrasil-stage {
+  width: min(100%, 470px);
   position: relative;
   z-index: 1;
+}
+.multiverse-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
   overflow: visible;
   fill: none;
+}
+.hero-particles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Loki. The figure is knocked out of the page colour so the trunk's glow reads
+   as light behind him rather than as a sticker laid on top. */
+.yggdrasil-figure {
+  fill: rgba(230,182,94,.13);
+  stroke: var(--gold);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 13px rgba(230,182,94,.42));
+}
+/* Arms raised to the threads. Stroked, not filled: at this scale a filled arm
+   silhouette is a blob, a 3px stroke with round caps reads as a limb. */
+.yggdrasil-arm {
+  stroke: var(--gold);
+  stroke-width: 3;
+  stroke-linecap: round;
+  fill: none;
+  opacity: .9;
+}
+.yggdrasil-hand { fill: var(--gold); }
+.yggdrasil-plinth {
+  stroke: rgba(230,182,94,.32);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+/* The threads he is holding: same travelling-dash idea as the trunk, on a
+   short enough path to need its own period. */
+.yggdrasil-thread {
+  stroke: rgba(230,182,94,.6);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-dasharray: 11 91;
+  animation: yggdrasil-thread-flow 3.4s linear infinite;
+}
+.yggdrasil-caption {
+  fill: #767b86;
+  font: 600 7.5px var(--font-mono);
+  letter-spacing: .22em;
 }
 
 /* The trunk. The flow copy is a single travelling dash on the same path, so
@@ -494,29 +507,81 @@ body.splash-active { overflow: hidden; }
   stroke: var(--gold);
   stroke-width: 2.4;
   stroke-linecap: round;
-  stroke-dasharray: 46 640;
+  stroke-dasharray: 30 200;
   filter: drop-shadow(0 0 7px rgba(230,182,94,.7));
-  animation: multiverse-flow 5.5s linear infinite;
+  animation: multiverse-flow 4.4s linear infinite;
 }
 
-.branch-line {
-  stroke: rgba(241,42,51,.62);
-  stroke-width: 1.6;
-  stroke-dasharray: 320;
-  stroke-dashoffset: 320;
-  filter: drop-shadow(0 0 6px rgba(241,42,51,.35));
-  animation: multiverse-branch 5.4s var(--ease-out) var(--branch-delay, 0ms) infinite;
+/* Boughs. Colour comes through --lane-color, the same channel the minimap
+   uses, so a lane can never be one colour here and another there. */
+.bough-group {
+  --lane-color: #4d5361;
+  transition: opacity var(--duration-base) var(--ease-out);
 }
-.branch-halo {
-  fill: rgba(241,42,51,.08);
-  stroke: rgba(241,42,51,.18);
+.bough-group[data-lane="Infinity"] { --lane-color: var(--lane-infinity); }
+.bough-group[data-lane="Multiverse"] { --lane-color: var(--lane-multiverse); }
+.bough-group[data-lane="Street"] { --lane-color: var(--lane-street); }
+.bough-group[data-lane="Legacy"] { --lane-color: var(--lane-legacy); }
+.bough-group[data-lane="Future"] { --lane-color: var(--lane-future); }
+
+/* A 3px stroke is not a pointer target. This one is, and it is invisible.
+   Spelled rgba rather than `transparent`: some SVG rasterisers treat the
+   keyword as black on a stroke, and this path sits over the labels. */
+.bough-hit {
+  stroke: rgba(0, 0, 0, 0);
+  stroke-width: 26;
+  stroke-linecap: round;
+}
+.bough {
+  stroke: var(--lane-color);
+  stroke-linecap: round;
+  opacity: .5;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: yggdrasil-grow 1.5s var(--ease-out) var(--branch-delay, 0ms) forwards;
+}
+/* Watched completion, as a fraction of the bough's own length. pathLength=100
+   normalises every bough to the same scale, so the dash array is a percentage
+   and nothing has to measure the path at runtime. */
+.bough-progress {
+  stroke: var(--lane-color);
+  /* butt, not round: a round cap renders a zero-length dash as a dot, so at 0%
+     watched every bough would plant a bead on the nexus event. */
+  stroke-linecap: butt;
+  filter: drop-shadow(0 0 7px var(--lane-color));
+  transition: stroke-dasharray var(--duration-slow) var(--ease-out);
+  animation: yggdrasil-fade .6s ease calc(var(--branch-delay, 0ms) + 1100ms) both;
+}
+
+.twig {
+  stroke: var(--lane-color);
   stroke-width: 1;
-  animation: multiverse-breathe 4.4s ease-in-out var(--branch-delay, 0ms) infinite;
+  stroke-linecap: round;
+  opacity: .4;
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: yggdrasil-twig 1.1s var(--ease-out) calc(var(--branch-delay, 0ms) + 850ms) forwards;
+}
+.twig-bud {
+  fill: var(--lane-color);
+  opacity: .62;
+  animation: yggdrasil-fade .6s ease calc(var(--branch-delay, 0ms) + 1500ms) both;
+}
+
+/* Bough tips. */
+.branch-halo {
+  fill: var(--lane-color);
+  stroke: var(--lane-color);
+  stroke-width: 1;
+  opacity: .1;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: yggdrasil-halo 4.4s ease-in-out var(--branch-delay, 0ms) infinite;
 }
 /* transform-box keeps the spin about the ring's own centre rather than the
    svg origin, which would swing it across the canvas. */
 .branch-ring {
-  stroke: rgba(215,233,255,.55);
+  stroke: rgba(215,233,255,.5);
   stroke-width: 1;
   stroke-dasharray: 5 7;
   transform-box: fill-box;
@@ -524,8 +589,8 @@ body.splash-active { overflow: hidden; }
   animation: multiverse-spin 14s linear infinite;
 }
 .branch-core {
-  fill: #ffe9ea;
-  filter: drop-shadow(0 0 9px var(--red));
+  fill: #fff;
+  filter: drop-shadow(0 0 9px var(--lane-color));
 }
 .branch-label {
   fill: var(--color-text);
@@ -538,7 +603,35 @@ body.splash-active { overflow: hidden; }
   letter-spacing: .18em;
 }
 
-/* Nexus events: where a branch leaves the timeline. */
+/* Hovering one bough dims its siblings, so the tree answers "which saga is
+   this?" without a legend. Focus does the same, for the keyboard path. */
+.yggdrasil a { cursor: pointer; outline: none; }
+/* :has, not :hover — the svg's box is mostly empty space, and dimming the tree
+   whenever the pointer crosses that box makes the hero flicker for no reason. */
+.yggdrasil:has(a:hover) .bough-group,
+.yggdrasil:has(a:focus-visible) .bough-group { opacity: .26; }
+.yggdrasil a:hover .bough-group,
+.yggdrasil a:focus-visible .bough-group { opacity: 1; }
+.yggdrasil a:hover .bough,
+.yggdrasil a:focus-visible .bough { opacity: .85; }
+.yggdrasil a:focus-visible .branch-ring {
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-dasharray: none;
+}
+
+/* A timeline the TVA pruned: it grows, whites out, and is gone. */
+.prune-branch {
+  stroke: var(--red);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-dasharray: 110;
+  stroke-dashoffset: 110;
+  filter: drop-shadow(0 0 6px var(--red));
+  animation: yggdrasil-prune 9s var(--ease-out) 2.4s infinite;
+}
+
+/* The nexus event: where Loki branches off Endgame. A real edge in the data. */
 .multiverse-nexus {
   fill: #0a0d13;
   stroke: var(--gold);
@@ -546,23 +639,35 @@ body.splash-active { overflow: hidden; }
   transform-box: fill-box;
   transform-origin: center;
   transform: rotate(45deg);
-  animation: multiverse-nexus 4.4s ease-in-out var(--branch-delay, 0ms) infinite;
+  animation: multiverse-nexus 4.4s ease-in-out infinite;
 }
 .multiverse-spine-label {
   fill: #767b86;
   font: 600 8px var(--font-mono);
-  letter-spacing: .22em;
+  letter-spacing: .18em;
+}
+.multiverse-spine-sub {
+  fill: #575c67;
+  font: 600 6.5px var(--font-mono);
+  letter-spacing: .18em;
 }
 
 .showcase-caption { position: absolute; right: 1%; bottom: 4%; color: #9a9da6; font: 600 8px var(--font-mono); letter-spacing: .2em; }
 .showcase-caption i { width: 28px; height: 1px; display: inline-block; margin-right: 9px; vertical-align: middle; background: var(--red); box-shadow: 0 0 10px var(--red); }
 .showcase-caption span { margin-left: 12px; color: var(--gold); }
 
-@keyframes multiverse-flow { to { stroke-dashoffset: -686; } }
-@keyframes multiverse-branch {
-  0% { stroke-dashoffset: 320; opacity: .15; }
-  22%, 74% { stroke-dashoffset: 0; opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: .3; }
+@keyframes multiverse-flow { to { stroke-dashoffset: -230; } }
+@keyframes yggdrasil-thread-flow { to { stroke-dashoffset: -102; } }
+@keyframes yggdrasil-grow { to { stroke-dashoffset: 0; } }
+@keyframes yggdrasil-twig { to { stroke-dashoffset: 0; } }
+@keyframes yggdrasil-fade { from { opacity: 0; } }
+@keyframes yggdrasil-halo { 50% { opacity: .2; transform: scale(1.09); } }
+@keyframes yggdrasil-prune {
+  0% { stroke-dashoffset: 110; opacity: 0; }
+  12% { opacity: .85; }
+  34% { stroke-dashoffset: 0; opacity: .85; }
+  42% { stroke-dashoffset: 0; opacity: 1; stroke: #fff; }
+  60%, 100% { stroke-dashoffset: 0; opacity: 0; }
 }
 @keyframes multiverse-spin { to { transform: rotate(360deg); } }
 @keyframes multiverse-breathe { 50% { opacity: .55; transform: scale(1.06); } }
@@ -1191,7 +1296,7 @@ button:hover .story-artwork img,
   .multiverse-showcase { min-width: 0; }
   .hero h1 { font-size: clamp(54px, 15vw, 86px); }
   .multiverse-showcase { min-height: 400px; margin-top: 18px; }
-  .multiverse-canvas { width: min(92vw, 440px); }
+  .yggdrasil-stage { width: min(92vw, 440px); }
   .workspace { padding: 55px 16px 70px; }
   .workspace-head { display: block; }
   .workspace-controls { margin-top: 24px; align-items: flex-start; flex-direction: column; }
@@ -1205,6 +1310,16 @@ button:hover .story-artwork img,
 }
 
 @media (max-width: 600px) {
+  .yggdrasil-stage { width: min(96vw, 400px); }
+  /* SVG text scales with the viewBox, so at 400px wide the 11px label is
+     already down to ~9 real pixels. These sizes are in user units and go *up*
+     to compensate; shrinking them here would make the tree unreadable. */
+  .branch-label { font-size: 13px; letter-spacing: .08em; }
+  .branch-note { font-size: 9.5px; letter-spacing: .12em; }
+  .multiverse-spine-label, .yggdrasil-caption { font-size: 10px; letter-spacing: .14em; }
+  .multiverse-spine-sub { font-size: 8px; letter-spacing: .14em; }
+  /* Hover cannot dim siblings on a touch screen, so leave every bough lit. */
+  .yggdrasil:has(a:hover) .bough-group { opacity: 1; }
   .hero-actions { align-items: stretch; flex-direction: column; }
   .primary, .secondary { width: 100%; }
   .primary { display: flex; align-items: center; justify-content: space-between; }
@@ -1252,6 +1367,27 @@ button:hover .story-artwork img,
   .timeline-item,
   .method { opacity: 1; transform: none; filter: none; }
   .timeline-progress { display: none; }
+
+  /* The tree's resting state is *undrawn* — every bough and twig starts at a
+     full stroke-dashoffset and only arrives via keyframes. Collapsing the
+     animation to .01ms is not enough on its own: it lands on whatever the last
+     frame happens to say. Pin the finished tree explicitly instead. */
+  .bough,
+  .twig,
+  .yggdrasil-thread,
+  .multiverse-trunk-flow { stroke-dashoffset: 0; }
+  /* The particle layer is pure motion; there is no still frame worth keeping.
+     The component also skips its loop, this just guarantees a blank canvas
+     never lingers over the tree. */
+  .hero-particles { display: none; }
+  .bough { opacity: .62; }
+  .twig { opacity: .42; }
+  .bough-progress,
+  .twig-bud { opacity: 1; }
+  .branch-halo { opacity: .12; }
+  .yggdrasil-thread { stroke-dasharray: none; }
+  /* A branch that flares and vanishes is exactly what this media query is for. */
+  .prune-branch { display: none; }
 }
 
 /* QA remediation: legibility, graph navigation, and state clarity */

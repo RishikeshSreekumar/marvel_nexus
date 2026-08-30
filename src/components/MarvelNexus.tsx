@@ -957,6 +957,7 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
           <HomeHero
             chronologyCount={chronology.length}
             legacyCount={legacy.length}
+            watched={watched}
             onOpenSearch={openSearch}
           />
         </div>

@@ -681,3 +681,11 @@ test("the dock's last-watched pointer only survives if the id is still real", ()
   // A title dropped from the dataset must not leave a dead jump target behind.
   assert.equal(parseStoredId("retired-title", validIds), null);
 });
+
+test("every hero bough links to a story that still exists", async () => {
+  const { HERO_ANCHOR_IDS } = await import("../src/components/HomeSections.tsx");
+  assert.equal(HERO_ANCHOR_IDS.length, 5);
+  for (const id of HERO_ANCHOR_IDS) {
+    assert.ok(byId.has(id), `hero bough links to missing story "${id}"`);
+  }
+});
