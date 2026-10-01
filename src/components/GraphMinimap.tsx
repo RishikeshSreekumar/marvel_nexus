@@ -48,6 +48,8 @@ export default function GraphMinimap({
     const viewport = scrollRef.current;
     if (!viewport) return;
     const sync = () => {
+      // One pending frame at most: scroll fires faster than frames paint.
+      cancelAnimationFrame(frameRef.current);
       frameRef.current = requestAnimationFrame(() =>
         setView({
           left: viewport.scrollLeft / zoom,
@@ -59,8 +61,12 @@ export default function GraphMinimap({
     };
     sync();
     viewport.addEventListener("scroll", sync, { passive: true });
+    // clientWidth/Height change on window resize without any scroll event.
+    const resizeObserver = new ResizeObserver(sync);
+    resizeObserver.observe(viewport);
     return () => {
       viewport.removeEventListener("scroll", sync);
+      resizeObserver.disconnect();
       cancelAnimationFrame(frameRef.current);
     };
   }, [scrollRef, zoom, nodes]);

@@ -35,7 +35,9 @@ export default function StatusDock({
   return (
     <div className="status-dock">
       <p className="status-dock-text">
-        <span className="status-dock-position" ref={positionRef}>1 / {total}</span>
+        {/* Filled by the timeline scroll pass. Left empty so React owns no text
+            node here that the pass's textContent writes would orphan. */}
+        <span className="status-dock-position" ref={positionRef} />
         <i />
         <span>
           <b>{watchedCount}</b>/{total} watched

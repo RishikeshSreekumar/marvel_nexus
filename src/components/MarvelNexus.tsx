@@ -77,10 +77,33 @@ const PORT_PITCH = 11;
  * boundary cannot catch a throw from its own render, so it has to sit above
  * this component rather than inside its returned tree.
  */
+/**
+ * localStorage throws (SecurityError) when site data is blocked and on a full
+ * quota. Progress is a convenience, so a failure must never take the island
+ * down with it.
+ */
+function readStorage(key: string) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(key: string, value: string | null) {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {
+    // Ignored: see readStorage.
+  }
+}
+
 function NexusApp({ page = "home" }: { page?: NexusPage }) {
-  const initial = typeof window === "undefined"
-    ? { destinationId: ALL_STORIES_ID, view: page === "timeline" ? "timeline" as const : "graph" as const, timelineMode: DEFAULT_TIMELINE_MODE, kind: "All" as const, showOptional: DEFAULT_SHOW_OPTIONAL }
-    : parseUrlState(window.location.search, new Set(allStories.map(({ id }) => id)));
+  // Always the SSR defaults: reading location.search here would render
+  // different markup than the static HTML and fail hydration on any ?to= link.
+  // The URL is applied right after mount, before first paint (see below).
+  const initial = { destinationId: ALL_STORIES_ID, timelineMode: DEFAULT_TIMELINE_MODE, kind: "All" as const, showOptional: DEFAULT_SHOW_OPTIONAL };
   const view: "graph" | "timeline" = page === "timeline" ? "timeline" : "graph";
   const [destinationId, setDestinationId] = useState(initial.destinationId);
   const [inspectedId, setInspectedId] = useState(initial.destinationId);
@@ -179,12 +202,12 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
 
   useEffect(() => {
     const ids = new Set(allStories.map(({ id }) => id));
-    setWatched(parseWatchedState(localStorage.getItem("marvel-nexus-watched"), ids));
-    setRecentIds(parseRecentIds(localStorage.getItem("marvel-nexus-recent"), ids));
-    setLastWatchedId(parseStoredId(localStorage.getItem("marvel-nexus-last"), ids));
+    setWatched(parseWatchedState(readStorage("marvel-nexus-watched"), ids));
+    setRecentIds(parseRecentIds(readStorage("marvel-nexus-recent"), ids));
+    setLastWatchedId(parseStoredId(readStorage("marvel-nexus-last"), ids));
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const sync = () => {
       const state = parseUrlState(location.search, new Set(allStories.map(({ id }) => id)));
       setDestinationId(state.destinationId);
@@ -193,6 +216,7 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
       setKind(state.kind);
       setShowOptional(state.showOptional);
     };
+    if (page !== "home") sync();
     addEventListener("popstate", sync);
     return () => removeEventListener("popstate", sync);
   }, []);
@@ -207,6 +231,7 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
+        setActiveResult(0);
         setSearchOpen(true);
       }
       if (event.key === "Escape" && searchOpen) closeSearch();
@@ -241,7 +266,7 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
     );
     nodes.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
-  }, [view, timelineMode, kind, showOptional]);
+  }, [view, timelineMode, kind, showOptional, query]);
 
   useEffect(() => {
     if (view !== "timeline") return;
@@ -299,7 +324,7 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
-  }, [view, timelineMode, kind, showOptional]);
+  }, [view, timelineMode, kind, showOptional, query]);
 
   // Stable identity, so React.memo on StoryNode is not defeated by a fresh
   // callback on every render.
@@ -353,31 +378,29 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
   };
 
   const toggleWatched = (id: string) => {
-    setWatched((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      localStorage.setItem("marvel-nexus-watched", serializeWatchedState(next));
-      // The dock's jump target follows the tick, and is cleared when the story
-      // it points at is un-ticked — otherwise it offers to take you to
-      // something that is no longer watched.
-      if (next.has(id)) {
-        setLastWatchedId(id);
-        localStorage.setItem("marvel-nexus-last", id);
-      } else if (lastWatchedId === id) {
-        setLastWatchedId(null);
-        localStorage.removeItem("marvel-nexus-last");
-      }
-      if (view === "timeline") {
-        // Announced from the same list the meter counts, so the spoken figure
-        // and the visible one cannot disagree.
-        const after = watchedProgress(timelineResults, next);
-        setAnnouncement(
-          `${byId.get(id)?.title ?? id} ${next.has(id) ? "marked" : "unmarked"} watched. ${after.percent}% watched.`,
-        );
-      }
-      return next;
-    });
+    const next = new Set(watched);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setWatched(next);
+    writeStorage("marvel-nexus-watched", serializeWatchedState(next));
+    // The dock's jump target follows the tick, and is cleared when the story
+    // it points at is un-ticked — otherwise it offers to take you to
+    // something that is no longer watched.
+    if (next.has(id)) {
+      setLastWatchedId(id);
+      writeStorage("marvel-nexus-last", id);
+    } else if (lastWatchedId === id) {
+      setLastWatchedId(null);
+      writeStorage("marvel-nexus-last", null);
+    }
+    if (view === "timeline") {
+      // Announced from the same list the meter counts, so the spoken figure
+      // and the visible one cannot disagree.
+      const after = watchedProgress(timelineResults, next);
+      setAnnouncement(
+        `${byId.get(id)?.title ?? id} ${next.has(id) ? "marked" : "unmarked"} watched. ${after.percent}% watched.`,
+      );
+    }
   };
 
   const disclosure = useMemo(
@@ -580,11 +603,9 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
   const choose = (id: string) => {
     // Recorded before the early return so a pick made from the timeline is
     // remembered even though that path is a full page navigation.
-    setRecentIds((current) => {
-      const next = pushRecentId(current, id);
-      localStorage.setItem("marvel-nexus-recent", serializeRecentIds(next));
-      return next;
-    });
+    const nextRecent = pushRecentId(recentIds, id);
+    setRecentIds(nextRecent);
+    writeStorage("marvel-nexus-recent", serializeRecentIds(nextRecent));
     if (page !== "graph") {
       window.location.href = serializeUrlState({
         destinationId: id, view: "graph", timelineMode, kind, showOptional,
@@ -693,6 +714,7 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
 
   const closeSearch = () => {
     setSearchOpen(false);
+    setQuery("");
     requestAnimationFrame(() => searchTriggerRef.current?.focus());
   };
 
@@ -967,7 +989,7 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
         <div className="workspace-head">
           <div>
             <div className="section-kicker">{view === "graph" ? "THE NEXUS MAP" : "THE SACRED TIMELINE"}</div>
-            <h2 ref={workspaceHeadingRef} tabIndex={-1}>{view === "graph" ? <>Trace any story’s <span>path</span></> : <>Watch it <span>chronologically</span></>}</h2>
+            <h1 ref={workspaceHeadingRef} tabIndex={-1}>{view === "graph" ? <>Trace any story’s <span>path</span></> : <>Watch it <span>chronologically</span></>}</h1>
             <p>{view === "graph"
               // Same helper as the timeline meter, so the two pages never
               // report different completion for the same watched set.

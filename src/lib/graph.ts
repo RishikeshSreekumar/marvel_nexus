@@ -1,8 +1,6 @@
 export type Kind = "Movie" | "Series" | "Special";
 export type Lane = "Infinity" | "Multiverse" | "Street" | "Legacy" | "Future";
 export type TimelineMode = "story" | "release";
-export type StoryType = Kind;
-export type StoryBranch = Lane;
 export type ViewMode = "graph" | "timeline";
 export type KindFilter = "All" | Kind;
 
@@ -578,7 +576,7 @@ export function assignNodeTops(
     neighbours: Map<string, string[]>,
     settled: (id: string) => boolean,
   ) => {
-    const desired = column.map((story, index) => {
+    const desired = column.map((story) => {
       let weight = 0;
       let total = 0;
       for (const id of neighbours.get(story.id) ?? []) {

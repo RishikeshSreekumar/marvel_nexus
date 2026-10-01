@@ -693,13 +693,13 @@ body.splash-active { overflow: hidden; }
   gap: 30px;
 }
 .section-kicker { color: var(--red); }
-.workspace-head h2, .method h2 {
+.workspace-head h1, .method h2 {
   margin: 10px 0 7px;
   font: 650 clamp(32px, 3.5vw, 52px)/1 var(--font-display);
   letter-spacing: -.025em;
   text-transform: uppercase;
 }
-.workspace-head h2 span, .method h2 em { color: transparent; font-style: normal; -webkit-text-stroke: 1px #8e9096; }
+.workspace-head h1 span, .method h2 em { color: transparent; font-style: normal; -webkit-text-stroke: 1px #8e9096; }
 .workspace-head p { margin: 0; color: #777a82; font-size: 12px; }
 .workspace-controls { display: flex; align-items: center; gap: 20px; }
 .order-switch {
@@ -1636,8 +1636,8 @@ footer p, footer > span { color: #9197a2; font-size: 11px; }
     background 260ms ease,
     box-shadow 260ms ease;
 }
-.page-graph .workspace-head h2,
-.page-timeline .workspace-head h2 {
+.page-graph .workspace-head h1,
+.page-timeline .workspace-head h1 {
   transition:
     font-size 360ms var(--ease-out),
     margin 360ms var(--ease-out),
@@ -1732,8 +1732,8 @@ footer p, footer > span { color: #9197a2; font-size: 11px; }
     font-size: 10px;
     letter-spacing: .06em;
   }
-  .page-graph .workspace-head h2,
-  .page-timeline .workspace-head h2 { font-size: clamp(38px, 8vw, 58px); }
+  .page-graph .workspace-head h1,
+  .page-timeline .workspace-head h1 { font-size: clamp(38px, 8vw, 58px); }
   .graph-scroll { max-height: 62vh; }
   .inspector { max-height: none; position: static; }
 }
@@ -1827,10 +1827,10 @@ body { overflow-x: hidden; }
   box-shadow: none;
   backdrop-filter: none;
 }
-.page-graph .workspace-head h2,
-.page-timeline .workspace-head h2,
-.page-graph .workspace-head.is-compact h2,
-.page-timeline .workspace-head.is-compact h2 {
+.page-graph .workspace-head h1,
+.page-timeline .workspace-head h1,
+.page-graph .workspace-head.is-compact h1,
+.page-timeline .workspace-head.is-compact h1 {
   max-width: 980px;
   margin: 12px 0 10px;
   font-size: clamp(52px, 6vw, 88px);
@@ -1903,8 +1903,8 @@ body { overflow-x: hidden; }
   }
   .workspace-topbar .compact-page-title { display: inline-block; }
   .workspace-topbar.is-compact .compact-page-title { max-width: 175px; }
-  .page-graph .workspace-head h2,
-  .page-timeline .workspace-head h2 {
+  .page-graph .workspace-head h1,
+  .page-timeline .workspace-head h1 {
     font-size: clamp(42px, 14vw, 62px);
   }
   .page-graph .workspace-controls,
@@ -1998,8 +1998,8 @@ body { overflow-x: hidden; }
   .page-timeline .workspace-head {
     padding: 32px 20px 24px;
   }
-  .page-graph .workspace-head h2,
-  .page-timeline .workspace-head h2 {
+  .page-graph .workspace-head h1,
+  .page-timeline .workspace-head h1 {
     max-width: 100%;
     font-size: clamp(38px, 10.5vw, 48px);
     line-height: .92;

@@ -16,6 +16,56 @@ const FETCH_TIMEOUT_MS = 6000;
 /** One retry, network errors only — never a 404. */
 const RETRY_DELAY_MS = 800;
 
+/**
+ * Requests in flight, keyed like the cache. The same title is often mounted
+ * twice at once (a graph node and the Inspector backdrop), and the cache only
+ * fills on resolve, so without this both would hit Wikipedia.
+ */
+const inflight = new Map<string, Promise<string | null | undefined>>();
+
+/**
+ * Resolves to the image URL, null for "no poster exists" (cached), or
+ * undefined for a network failure after one retry (not cached, so a later
+ * mount can try again). Never aborted by an unmount: other mounts may share it.
+ */
+function fetchArtwork(title: string) {
+  const pending = inflight.get(title);
+  if (pending) return pending;
+  const load = async (attempt: number): Promise<string | null | undefined> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const response = await fetch(
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
+        { signal: controller.signal },
+      );
+      // A 404 is a real answer: this title has no Wikipedia summary. Cache it.
+      if (!response.ok) {
+        artworkCache.set(title, null);
+        return null;
+      }
+      const data = await response.json();
+      const image: string | null = data?.thumbnail?.source ?? data?.originalimage?.source ?? null;
+      artworkCache.set(title, image);
+      return image;
+    } catch (error) {
+      // Timed out: give up without caching. A flaky request must not kill a
+      // poster for the whole session, since the cache never expires.
+      if ((error as Error)?.name === "AbortError") return undefined;
+      if (attempt === 0) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+        return load(1);
+      }
+      return undefined;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  const request = load(0).finally(() => inflight.delete(title));
+  inflight.set(title, request);
+  return request;
+}
+
 function StoryArtwork({
   story,
   variant = "poster",
@@ -35,61 +85,24 @@ function StoryArtwork({
     const host = hostRef.current;
     if (!host) return;
     let cancelled = false;
-    const controller = new AbortController();
-    let retryTimer: ReturnType<typeof setTimeout> | undefined;
-
-    const load = async (attempt = 0): Promise<void> => {
-      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-      try {
-        const response = await fetch(
-          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(lookupTitle)}`,
-          { signal: controller.signal },
-        );
-        // A 404 is a real answer: this title has no Wikipedia summary. Cache it.
-        if (!response.ok) {
-          artworkCache.set(lookupTitle, null);
-          if (!cancelled) { setSrc(null); setLoading(false); }
-          return;
-        }
-        const data = await response.json();
-        const image = data?.thumbnail?.source ?? data?.originalimage?.source ?? null;
-        artworkCache.set(lookupTitle, image);
-        if (!cancelled) { setSrc(image); setLoading(false); }
-      } catch (error) {
-        // Unmounted or timed out: leave the cache alone. Caching null here is
-        // what used to make one flaky request kill a poster for the whole
-        // session, since the cache is module scope and never expires.
-        if (cancelled || (error as Error)?.name === "AbortError") {
-          if (!cancelled) setLoading(false);
-          return;
-        }
-        if (attempt === 0) {
-          retryTimer = setTimeout(() => void load(1), RETRY_DELAY_MS);
-          return;
-        }
-        artworkCache.set(lookupTitle, null);
-        setSrc(null);
-        setLoading(false);
-      } finally {
-        clearTimeout(timer);
-      }
-    };
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          observer.disconnect();
-          setLoading(true);
-          void load();
-        }
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
+        setLoading(true);
+        void fetchArtwork(lookupTitle).then((image) => {
+          if (cancelled) return;
+          setLoading(false);
+          // undefined = transient failure: show the fallback, cache nothing.
+          setSrc(image ?? null);
+        });
       },
       { rootMargin: "300px" },
     );
     observer.observe(host);
     return () => {
       cancelled = true;
-      clearTimeout(retryTimer);
-      controller.abort();
       observer.disconnect();
     };
   }, [lookupTitle, src]);
