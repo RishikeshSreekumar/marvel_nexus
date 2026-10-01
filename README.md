@@ -1,6 +1,6 @@
 # Marvel Nexus
 
-An Astro + React recreation of the Marvel Nexus MCU chronology and story-dependency navigator. It contains 78 canonical season-level timeline stops and 17 legacy branch titles from the July 2026 data cut.
+An Astro + React recreation of the Marvel Nexus MCU chronology and story-dependency navigator. It contains 79 canonical season-level timeline stops and 18 legacy branch titles from the October 2026 data cut.
 
 ## Run locally
 
@@ -34,7 +34,7 @@ npm run preview
 
 Use a stable, URL-safe `id` and add each title through the `s(...)` helper in `src/lib/stories.ts`. Canonical MCU entries belong in `chronologyInput`; alternate legacy universes belong in `legacyInput`.
 
-The dependency list contains story IDs that must already exist somewhere in the combined dataset. Dependencies point from required context toward the title that requires it. The application validates duplicate IDs, missing references, self-links, cycles, and the expected 95/78/17 counts at startup and in tests.
+The dependency list contains story IDs that must already exist somewhere in the combined dataset. Dependencies point from required context toward the title that requires it. The application validates duplicate IDs, missing references, self-links, cycles, and the expected 97/79/18 counts at startup and in tests.
 
 Add a new released title to `releaseSequence` if it should participate in release-order sorting. Mark texture-only entries with `optional: true`, announced titles with `upcoming: true`, and uncertain placements with `editorialPlacement: true`.
 

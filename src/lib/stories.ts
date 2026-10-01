@@ -41,6 +41,9 @@ const wikipediaTitleOverrides: Record<string, string> = {
   "fantastic-four": "The Fantastic Four: First Steps",
   "doomsday": "Avengers: Doomsday",
   "secret-wars": "Avengers: Secret Wars",
+  // Wikipedia titles use a straight apostrophe; the curly one 404s.
+  "xmen97": "X-Men '97",
+  "xmen97-2": "X-Men '97 season 2",
 };
 
 export function artworkTitle(story: Story) {
@@ -107,8 +110,8 @@ const chronologyInput: StoryInput[] = [
   s("she-hulk", "She-Hulk: Attorney at Law", "Series", "2022", "2025", "Street", ["hulk", "endgame"], "Jennifer Walters opens the superhuman legal world."),
   s("ms-marvel", "Ms. Marvel", "Series", "2022", "2025", "Multiverse", ["captain-marvel", "endgame"], "Kamala Khan’s origin connects family history to the cosmic MCU."),
   s("love-thunder", "Thor: Love and Thunder", "Movie", "2022", "2025", "Multiverse", ["ragnarok", "endgame", "guardians-2"], "Thor faces Gorr and Jane becomes the Mighty Thor."),
-  s("werewolf", "Werewolf by Night", "Special", "2022", "2025", "Multiverse", [], "A compact introduction to Marvel’s monster world.", true),
   s("ironheart", "Ironheart", "Series", "2025", "2025", "Multiverse", ["wakanda-forever", "iron-man"], "Riri Williams brings armor into conflict with magic."),
+  s("werewolf", "Werewolf by Night", "Special", "2022", "2025", "Multiverse", [], "A compact introduction to Marvel’s monster world.", true),
   s("guardians-holiday", "The Guardians of the Galaxy Holiday Special", "Special", "2022", "Christmas 2025", "Multiverse", ["guardians-2", "endgame"], "The new Knowhere status quo before Vol. 3."),
   s("quantumania", "Ant-Man and the Wasp: Quantumania", "Movie", "2023", "2026", "Multiverse", ["ant-wasp", "endgame", "loki-1"], "The Ant-family enters the Quantum Realm and meets Kang."),
   s("guardians-3", "Guardians of the Galaxy Vol. 3", "Movie", "2023", "2026", "Multiverse", ["guardians-holiday", "endgame"], "Rocket’s origin closes the original Guardians team."),
@@ -116,17 +119,18 @@ const chronologyInput: StoryInput[] = [
   s("marvels", "The Marvels", "Movie", "2023", "2026", "Multiverse", ["captain-marvel", "wandavision", "ms-marvel", "secret-invasion"], "Carol, Monica, and Kamala become entangled."),
   s("loki-2", "Loki — Season 2", "Series", "2023", "Outside time", "Multiverse", ["loki-1"], "Loki fights to hold the branching timelines together."),
   s("what-if-2", "What If…? — Season 2", "Series", "2023", "Across realities", "Multiverse", ["what-if-1", "loki-2"], "The Watcher’s multiverse anthology expands.", true),
-  s("what-if-3", "What If…? — Season 3", "Series", "2024", "Across realities", "Multiverse", ["what-if-2"], "The Watcher’s final anthology chapter explores new realities.", true),
+  s("deadpool-wolverine", "Deadpool & Wolverine", "Movie", "2024", "2024 / TVA", "Multiverse", ["deadpool-2", "logan", "loki-1"], "Fox’s mutant history crashes into the TVA."),
   s("agatha", "Agatha All Along", "Series", "2024", "2026", "Multiverse", ["wandavision"], "Agatha walks the Witches’ Road after Westview."),
-  s("deadpool-wolverine", "Deadpool & Wolverine", "Movie", "2024", "2024–2026 / TVA", "Multiverse", ["deadpool-2", "logan", "loki-1"], "Fox’s mutant history crashes into the TVA."),
+  s("what-if-3", "What If…? — Season 3", "Series", "2024", "Across realities", "Multiverse", ["what-if-2"], "The Watcher’s final anthology chapter explores new realities.", true),
   s("daredevil-ba", "Daredevil: Born Again — Season 1", "Series", "2025", "2026–2027", "Street", ["echo", "daredevil-3"], "Matt Murdock and Mayor Fisk resume their collision course."),
-  s("brave-new-world", "Captain America: Brave New World", "Movie", "2025", "2027", "Future", ["falcon", "hulk", "eternals"], "Sam faces President Ross and the world’s new power struggle."),
-  { ...s("thunderbolts", "Thunderbolts*", "Movie", "2025", "2027 (editorial)", "Future", ["black-widow", "falcon", "ant-wasp", "hawkeye"], "Yelena, Bucky, Ghost, Walker, and Red Guardian become the New Avengers."), editorialPlacement: true },
+  s("brave-new-world", "Captain America: Brave New World", "Movie", "2025", "2026–2027", "Future", ["falcon", "hulk", "eternals"], "Sam faces President Ross and the world’s new power struggle."),
+  s("thunderbolts", "Thunderbolts*", "Movie", "2025", "2027", "Future", ["black-widow", "falcon", "ant-wasp", "hawkeye"], "Yelena, Bucky, Ghost, Walker, and Red Guardian become the New Avengers."),
+  s("fantastic-four", "The Fantastic Four: First Steps", "Movie", "2025", "Earth-828 / 1964", "Multiverse", ["loki-2"], "A retro-futurist Fantastic Four enters the multiverse story."),
+  s("wonder-man", "Wonder Man", "Series", "2026", "2025–2027", "Future", ["shang-chi"], "Hollywood satire meets superhuman identity."),
   s("daredevil-ba-2", "Daredevil: Born Again — Season 2", "Series", "2026", "2027", "Street", ["daredevil-ba"], "The resistance to Fisk’s anti-vigilante rule escalates."),
   s("punisher-special", "The Punisher: One Last Kill", "Special", "2026", "2027", "Street", ["punisher-2", "daredevil-ba"], "Frank Castle returns for one last mission."),
-  s("wonder-man", "Wonder Man", "Series", "2026", "2027", "Future", ["shang-chi"], "Hollywood satire meets superhuman identity."),
-  s("fantastic-four", "The Fantastic Four: First Steps", "Movie", "2025", "Earth-828 / 1960s", "Multiverse", ["loki-2"], "A retro-futurist Fantastic Four enters the multiverse story."),
-  s("brand-new-day", "Spider-Man: Brand New Day", "Movie", "2026", "2027", "Future", ["no-way-home", "daredevil-ba"], "Peter’s anonymous new chapter collides with New York’s street-level world."),
+  s("brand-new-day", "Spider-Man: Brand New Day", "Movie", "2026", "2028", "Future", ["no-way-home", "daredevil-ba", "punisher-special"], "Peter’s anonymous new chapter collides with New York’s street-level world."),
+  { ...s("visionquest", "VisionQuest", "Series", "2026", "c. 2028 (editorial)", "Future", ["wandavision", "agatha"], "Vision returns years after Westview to search for his own identity.", false, true), editorialPlacement: true },
   s("doomsday", "Avengers: Doomsday", "Movie", "2026", "Upcoming", "Future", ["thunderbolts", "fantastic-four", "loki-2", "deadpool-wolverine", "brand-new-day", "doctor-strange-2", "quantumania", "brave-new-world", "wakanda-forever", "love-thunder", "shang-chi"], "The Avengers, Wakandans, Fantastic Four, and X-Men face Doctor Doom.", false, true),
   s("secret-wars", "Avengers: Secret Wars", "Movie", "2027", "Upcoming", "Future", ["doomsday"], "The Multiverse Saga’s announced culmination.", false, true),
 ];
@@ -147,7 +151,8 @@ const legacyInput: StoryInput[] = [
   s("raimi-3", "Spider-Man 3", "Movie", "2007", "Raimi universe", "Legacy", ["raimi-2"], "The Raimi trilogy’s full context for No Way Home.", true),
   s("amazing-1", "The Amazing Spider-Man", "Movie", "2012", "Webb universe", "Legacy", [], "A second cinematic Peter Parker begins.", true),
   s("amazing-2", "The Amazing Spider-Man 2", "Movie", "2014", "Webb universe", "Legacy", ["amazing-1"], "Electro and Gwen’s story feed No Way Home.", true),
-  s("xmen97", "X-Men ’97", "Series", "2024", "Earth-92131", "Legacy", [], "The animated mutant timeline continues.", true),
+  s("xmen97", "X-Men ’97 — Season 1", "Series", "2024", "Earth-92131", "Legacy", [], "The animated mutant timeline continues.", true),
+  s("xmen97-2", "X-Men ’97 — Season 2", "Series", "2026", "Earth-92131", "Legacy", ["xmen97"], "The X-Men, scattered across time after Asteroid M, fight their way home.", true),
   s("friendly-spider", "Your Friendly Neighborhood Spider-Man", "Series", "2025", "Alternate reality", "Legacy", [], "A standalone animated Peter Parker branch.", true),
 ];
 
@@ -179,7 +184,8 @@ const releaseSequence = [
   "echo", "xmen97", "deadpool-wolverine", "agatha", "what-if-3",
   "friendly-spider", "brave-new-world", "daredevil-ba", "thunderbolts",
   "ironheart", "fantastic-four", "eyes", "marvel-zombies", "wonder-man",
-  "daredevil-ba-2", "brand-new-day", "punisher-special", "doomsday",
+  "daredevil-ba-2", "punisher-special", "xmen97-2", "brand-new-day",
+  "visionquest", "doomsday",
   "secret-wars",
 ];
 
@@ -201,6 +207,6 @@ export const allStories: Story[] = [...stories];
  * counts and calls validateStories directly; `npm run build` runs it first.
  */
 if (import.meta.env?.DEV) {
-  validateStories(allStories, { total: 95, canonical: 78, legacy: 17 });
+  validateStories(allStories, { total: 97, canonical: 79, legacy: 18 });
 }
 export const byId = new Map(allStories.map((story) => [story.id, story]));

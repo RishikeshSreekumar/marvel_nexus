@@ -48,13 +48,13 @@ import {
 
 const byId = new Map(stories.map((story) => [story.id, story]));
 
-test("ships the complete validated July 2026 dataset", () => {
-  assert.equal(stories.length, 95);
-  assert.equal(chronology.length, 78);
-  assert.equal(legacy.length, 17);
-  assert.equal(new Set(stories.map(({ id }) => id)).size, 95);
+test("ships the complete validated October 2026 dataset", () => {
+  assert.equal(stories.length, 97);
+  assert.equal(chronology.length, 79);
+  assert.equal(legacy.length, 18);
+  assert.equal(new Set(stories.map(({ id }) => id)).size, 97);
   assert.doesNotThrow(() =>
-    validateStories(stories, { total: 95, canonical: 78, legacy: 17 }),
+    validateStories(stories, { total: 97, canonical: 79, legacy: 18 }),
   );
 });
 
@@ -91,10 +91,10 @@ test("derives the Doomsday graph, metrics, edges, and depths", () => {
   const destination = byId.get("doomsday")!;
   const graph = graphStories([...stories], destination, byId, true);
   const requiredOnly = graphStories([...stories], destination, byId, false);
-  assert.equal(ancestorIds(destination, byId).size, 63);
-  assert.equal(graph.length, 64);
+  assert.equal(ancestorIds(destination, byId).size, 66);
+  assert.equal(graph.length, 67);
   assert.ok(requiredOnly.length < graph.length);
-  assert.equal(graphMetrics(graph, destination.id, new Set()).unwatched, 63);
+  assert.equal(graphMetrics(graph, destination.id, new Set()).unwatched, 66);
   assert.ok(dependencyEdges(graph).length > 63);
   assert.ok(depthOf(destination.id, byId) > 0);
 });

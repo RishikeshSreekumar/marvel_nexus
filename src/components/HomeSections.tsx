@@ -440,7 +440,7 @@ export function HomeFooter() {
         An independent fan-made story navigator. Timeline placement follows Marvel’s
         published Disney+ chronology; narrative dependencies are editorial.
       </p>
-      <span>DATA CUT · JUL 2026</span>
+      <span>DATA CUT · OCT 2026</span>
     </footer>
   );
 }
