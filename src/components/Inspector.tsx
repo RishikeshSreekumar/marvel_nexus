@@ -1,6 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { charactersInStory } from "../lib/characters";
 import { nodeRelations, type GraphEdge, type Story } from "../lib/graph";
 import StoryArtwork from "./StoryArtwork";
+
+/** Leads only until asked; Endgame alone has sixty-odd named characters. */
+const CAST_PREVIEW = 12;
 
 /**
  * Detail panel for the inspected story.
@@ -21,6 +25,7 @@ export default function Inspector({
   onChoose,
   onInspect,
   onToggleWatched,
+  onClose,
 }: {
   story: Story;
   /** null when the map shows every story instead of one destination's path. */
@@ -40,11 +45,19 @@ export default function Inspector({
   onChoose: (id: string) => void;
   onInspect: (id: string) => void;
   onToggleWatched: (id: string) => void;
+  /** Lowers the phone bottom sheet. The control is hidden on wider screens. */
+  onClose: () => void;
 }) {
   const panelRef = useRef<HTMLElement>(null);
   const position = chronology.findIndex((entry) => entry.id === story.id);
   // One derivation shared with the graph nodes' screen-reader descriptions, so
   // the two can never disagree about what a story is connected to.
+  const cast = charactersInStory(story.id);
+  const [castOpenFor, setCastOpenFor] = useState<string | null>(null);
+  const castOpen = castOpenFor === story.id;
+  const shownCast = castOpen ? cast : cast.slice(0, CAST_PREVIEW);
+  /** Swipe-down on the handle lowers the sheet. */
+  const dragRef = useRef<number | null>(null);
   const { requires, unlocks: requiredBy } = nodeRelations(
     story.id,
     edges,
@@ -65,6 +78,24 @@ export default function Inspector({
       aria-label={`Details: ${story.title}`}
       style={{ viewTransitionName: "story-inspector" }}
     >
+      <div
+        className="sheet-handle"
+        onTouchStart={(event) => { dragRef.current = event.touches[0]?.clientY ?? null; }}
+        onTouchMove={(event) => {
+          const start = dragRef.current;
+          const y = event.touches[0]?.clientY;
+          if (start !== null && y !== undefined && y - start > 56) {
+            dragRef.current = null;
+            onClose();
+          }
+        }}
+        onTouchEnd={() => { dragRef.current = null; }}
+      >
+        <i aria-hidden="true" />
+        <button type="button" className="sheet-close" onClick={onClose} aria-label="Close details">
+          ×
+        </button>
+      </div>
       <StoryArtwork story={story} variant="backdrop" />
       <div className="inspector-top">
         <span className={`kind-badge ${story.kind.toLowerCase()}`}>{story.kind}</span>
@@ -126,6 +157,33 @@ export default function Inspector({
               {byId.get(id)?.title} <i>Inspect</i>
             </button>
           ))}
+        </div>
+      )}
+      {cast.length > 0 && (
+        <div className="inspector-cast">
+          <span>CHARACTERS · {cast.length}</span>
+          <div>
+            {shownCast.map((character) => (
+              <a
+                key={character.id}
+                href={`/characters?c=${character.id}`}
+                data-team={character.team}
+                title={`${character.name}${character.alias ? ` — ${character.alias}` : ""}`}
+              >
+                {character.name}
+              </a>
+            ))}
+            {cast.length > CAST_PREVIEW && (
+              <button
+                type="button"
+                className="inspector-cast-more"
+                aria-expanded={castOpen}
+                onClick={() => setCastOpenFor(castOpen ? null : story.id)}
+              >
+                {castOpen ? "Show fewer" : `+${cast.length - CAST_PREVIEW} more`}
+              </button>
+            )}
+          </div>
         </div>
       )}
       {story.editorialPlacement && (

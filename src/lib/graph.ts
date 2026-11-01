@@ -18,6 +18,11 @@ export type Story = {
   optional?: boolean;
   upcoming?: boolean;
   editorialPlacement?: boolean;
+  /**
+   * Announced premiere date (ISO yyyy-mm-dd) for upcoming titles. Drives the
+   * countdown; once the date passes the countdown moves on to the next one.
+   */
+  premiere?: string;
 };
 
 export type StoryInput = Omit<
@@ -1069,4 +1074,48 @@ export function watchedProgress(
 function listPhrase(items: readonly string[]): string {
   if (items.length <= 1) return items[0] ?? "";
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
+/**
+ * The next announced premiere on or after `now`, with whole days remaining.
+ *
+ * Data-driven so the countdown never needs editing: when Doomsday opens it
+ * quietly rolls on to Secret Wars, and with nothing announced it disappears.
+ * Dates are read as UTC midnight so every reader counts the same day.
+ */
+export function nextPremiere(
+  stories: readonly Story[],
+  now: Date,
+): { story: Story; days: number } | null {
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  let best: { story: Story; at: number } | null = null;
+  for (const story of stories) {
+    if (!story.premiere) continue;
+    const at = Date.parse(`${story.premiere}T00:00:00Z`);
+    if (Number.isNaN(at) || at < today) continue;
+    if (!best || at < best.at) best = { story, at };
+  }
+  if (!best) return null;
+  return { story: best.story, days: Math.round((best.at - today) / 86_400_000) };
+}
+
+/**
+ * The closure a reader must watch before `destinationId`, in watch order.
+ *
+ * Ordered by the chosen timeline so the list reads as a plan rather than a
+ * graph dump. Deep cuts follow the same filter the map uses.
+ */
+export function watchPlan(
+  destinationId: string,
+  byId: Map<string, Story>,
+  { showOptional, mode }: { showOptional: boolean; mode: TimelineMode },
+): Story[] {
+  const destination = byId.get(destinationId);
+  if (!destination) return [];
+  const { ids } = visibleGraph(destination, byId, { showOptional });
+  ids.delete(destinationId);
+  return sortTimeline(
+    [...ids].map((id) => byId.get(id)).filter((story): story is Story => !!story),
+    mode,
+  );
 }

@@ -689,3 +689,9 @@ test("every hero bough links to a story that still exists", async () => {
     assert.ok(byId.has(id), `hero bough links to missing story "${id}"`);
   }
 });
+
+test("featured destinations are real, unique stories", async () => {
+  const { featuredDestinations } = await import("../src/lib/stories.ts");
+  assert.equal(new Set(featuredDestinations).size, featuredDestinations.length);
+  for (const id of featuredDestinations) assert.ok(byId.has(id), id);
+});

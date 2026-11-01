@@ -132,6 +132,30 @@ export function useGraphViewport({
     setZoom(scale);
   }, [contentBox, scrollRef, stageRef]);
 
+  /**
+   * Put a layout-space point at the centre of the viewport, optionally at a
+   * new zoom. Same imperative order as applyZoom: zoom first so the scroll
+   * extents are already correct when the offsets are written.
+   */
+  const centerOn = useCallback(
+    (layoutX: number, layoutY: number, nextZoom?: number, smooth = false) => {
+      const viewport = scrollRef.current;
+      const stage = stageRef.current;
+      if (!viewport || !stage) return;
+      const scale = nextZoom === undefined ? zoomRef.current : clampZoom(nextZoom);
+      if (scale !== zoomRef.current) {
+        zoomRef.current = scale;
+        stage.style.zoom = String(scale);
+        setZoom(scale);
+      }
+      const left = Math.max(0, layoutX * scale - viewport.clientWidth / 2);
+      const top = Math.max(0, layoutY * scale - viewport.clientHeight / 2);
+      const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      viewport.scrollTo({ left, top, behavior: smooth && !reduce ? "smooth" : "auto" });
+    },
+    [scrollRef, stageRef],
+  );
+
   // Ctrl/meta + wheel, and trackpad pinch (which arrives as ctrl+wheel with a
   // fractional deltaY). Must be a native non-passive listener: React registers
   // onWheel passively at the root, so preventDefault() from it is ignored and
@@ -289,6 +313,7 @@ export function useGraphViewport({
     isPanning,
     fit,
     zoomBy,
+    centerOn,
     canZoomIn: zoom < ZOOM_MAX,
     canZoomOut: zoom > ZOOM_MIN,
     bindings: {

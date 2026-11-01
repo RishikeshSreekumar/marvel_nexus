@@ -21,6 +21,7 @@ export default function AppHeader({
     { href: "/", label: "Home", key: "home" },
     { href: "/graph", label: "Graph", key: "graph" },
     { href: "/timeline", label: "Timeline", key: "timeline" },
+    { href: "/characters", label: "Characters", key: "characters" },
   ] as const;
 
   return (
@@ -33,7 +34,7 @@ export default function AppHeader({
         <span className="brand-name"><BrandLockup /></span>
         {page !== "home" && (
           <span className="compact-page-title">
-            {page === "graph" ? "Dependency graph" : "MCU timeline"}
+            {page === "graph" ? "Dependency graph" : page === "timeline" ? "MCU timeline" : "Character tree"}
           </span>
         )}
       </a>

@@ -29,6 +29,7 @@ import {
   serializeRecentIds,
   pushRecentId,
   watchedProgress,
+  fitZoom,
 } from "../lib/graph";
 import { defaultDestinations, searchStories } from "../lib/search";
 import {
@@ -36,9 +37,13 @@ import {
   byId,
   chronology,
   legacy,
+  featuredDestinations,
 } from "../lib/stories";
 import { offsetWithin, useGraphViewport, type ContentBox } from "../lib/useGraphViewport";
 import AppHeader from "./AppHeader";
+import CharacterTree from "./CharacterTree";
+import PathList from "./PathList";
+import PremiereCountdown from "./PremiereCountdown";
 import ErrorBoundary from "./ErrorBoundary";
 import { HomeFooter, HomeHero, HomeMethod } from "./HomeSections";
 import Inspector from "./Inspector";
@@ -64,7 +69,28 @@ function transition(update: () => void) {
   else update();
 }
 
-export type NexusPage = "home" | "graph" | "timeline";
+export type NexusPage = "home" | "graph" | "timeline" | "characters";
+export type GraphLayout = "map" | "list";
+
+/** Phone breakpoint shared with the CSS (max-width: 700px). */
+const PHONE_QUERY = "(max-width: 700px)";
+
+/**
+ * Media query as state. Always false on the server and on the first client
+ * render, so hydration matches the static HTML; the real value lands in the
+ * effect right after mount.
+ */
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const list = matchMedia(query);
+    const sync = () => setMatches(list.matches);
+    sync();
+    list.addEventListener("change", sync);
+    return () => list.removeEventListener("change", sync);
+  }, [query]);
+  return matches;
+}
 
 /** Layout px reserved at the target end of an edge for its arrowhead. */
 const ARROW_GAP = 9;
@@ -105,6 +131,17 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
   // The URL is applied right after mount, before first paint (see below).
   const initial = { destinationId: ALL_STORIES_ID, timelineMode: DEFAULT_TIMELINE_MODE, kind: "All" as const, showOptional: DEFAULT_SHOW_OPTIONAL };
   const view: "graph" | "timeline" = page === "timeline" ? "timeline" : "graph";
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  /** Map or watch-order list. A per-viewer preference, so not in the URL. */
+  const [graphLayout, setGraphLayout] = useState<GraphLayout>("map");
+  /** Phone only: whether the Inspector bottom sheet is raised. */
+  const [sheetOpen, setSheetOpen] = useState(false);
+  /**
+   * Set whenever the map changes shape; consumed by the first layout pass
+   * that follows, which frames the new graph instead of leaving the reader
+   * staring at whatever empty corner the old scroll offsets point at.
+   */
+  const frameRequestRef = useRef(true);
   const [destinationId, setDestinationId] = useState(initial.destinationId);
   const [inspectedId, setInspectedId] = useState(initial.destinationId);
   const [timelineMode, setTimelineMode] = useState<TimelineMode>(initial.timelineMode);
@@ -129,6 +166,12 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
   const [lastWatchedId, setLastWatchedId] = useState<string | null>(null);
   const contentBoxRef = useRef<ContentBox>({ width: 0, height: 0 });
   const [nodeRects, setNodeRects] = useState<MinimapNode[]>([]);
+  /**
+   * The same rects, written synchronously by the layout pass. Framing reads
+   * this rather than the state: it runs in the commit that changed the map,
+   * before the state carrying the new rects has re-rendered.
+   */
+  const nodeRectsRef = useRef<MinimapNode[]>([]);
   // View-only state: deliberately not in the URL, so shared links keep
   // round-tripping to a clean address.
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -205,6 +248,8 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
     setWatched(parseWatchedState(readStorage("marvel-nexus-watched"), ids));
     setRecentIds(parseRecentIds(readStorage("marvel-nexus-recent"), ids));
     setLastWatchedId(parseStoredId(readStorage("marvel-nexus-last"), ids));
+    const layout = readStorage("marvel-nexus-graph-layout");
+    if (layout === "map" || layout === "list") setGraphLayout(layout);
   }, []);
 
   useLayoutEffect(() => {
@@ -216,13 +261,16 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
       setKind(state.kind);
       setShowOptional(state.showOptional);
     };
-    if (page !== "home") sync();
+    // The characters page owns its own query string (?c=), so it never
+    // adopts or rewrites the graph's.
+    if (page === "home" || page === "characters") return;
+    sync();
     addEventListener("popstate", sync);
     return () => removeEventListener("popstate", sync);
   }, []);
 
   useEffect(() => {
-    if (page === "home") return;
+    if (page === "home" || page === "characters") return;
     const url = serializeUrlState({ destinationId, view, timelineMode, kind, showOptional }, `/${page}`);
     history.replaceState(null, "", url);
   }, [destinationId, view, timelineMode, kind, showOptional, page]);
@@ -616,6 +664,7 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
       setDestinationId(id);
       setInspectedId(id);
       setFocusedId(null);
+      setSheetOpen(false);
       closeSearch();
       setQuery("");
     });
@@ -637,6 +686,7 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
     // into the Inspector would drop the user out of the graph mid-traversal,
     // so the change is announced instead.
     setInspectorTakesFocus(fromKeyboard);
+    setSheetOpen(true);
     setAnnouncement(
       `Inspecting ${byId.get(id)?.title ?? id}. ${
         (byId.get(id)?.deps.length ?? 0)
@@ -891,6 +941,7 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
         lane: byId.get(id)?.lane ?? "Infinity",
         ...rect,
       }));
+      nodeRectsRef.current = rects;
       setNodeRects((previous) =>
         previous.length === rects.length &&
         previous.every((entry, index) => {
@@ -922,6 +973,118 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
     // `columns` is included because reordering moves nodes without changing the
     // edge set — without it the paths would point at stale positions.
   }, [edges, columns, graphNodes]);
+
+  // Any change to what the map contains asks for a fresh frame.
+  useEffect(() => {
+    frameRequestRef.current = true;
+  }, [destinationId, showOptional, hideWatched, graphLayout, isPhone]);
+
+  /**
+   * Frame the graph. When the whole thing fits at a readable zoom it is simply
+   * fitted. Otherwise the reader lands at a readable zoom on the part that
+   * matters: the destination when there is one, the origins column when the
+   * map shows everything — never the empty top-left of a tall canvas.
+   */
+  /** Returns false when the map is not measurable yet (hidden, or unlaid). */
+  const frameGraph = (): boolean => {
+    const el = graphScrollRef.current;
+    const box = contentBoxRef.current;
+    const measured = nodeRectsRef.current;
+    if (!el || box.width <= 0 || el.clientWidth === 0 || !measured.length) return false;
+    // A hidden map measures every card at x=0; wait for the real pass.
+    if (measured.every((rect) => rect.w === 0)) return false;
+    const readable = isPhone ? 0.6 : 0.72;
+    const scale = fitZoom(box, { width: el.clientWidth, height: el.clientHeight });
+    if (scale >= readable) {
+      viewport.fit();
+      return true;
+    }
+    const rects = new Map(measured.map((rect) => [rect.id, rect]));
+    const halfWidth = el.clientWidth / 2 / readable;
+    const target = destination ? rects.get(destination.id) : null;
+    if (target) {
+      // Destination near the right edge, its prerequisites streaming in from
+      // the left.
+      viewport.centerOn(target.x + target.w + 32 - halfWidth, target.y + target.h / 2, readable);
+      return true;
+    }
+    const origins = (columns[0] ?? [])
+      .map(({ id }) => rects.get(id))
+      .filter((rect): rect is MinimapNode => !!rect);
+    if (!origins.length) return false;
+    const left = Math.min(...origins.map((rect) => rect.x));
+    const top = Math.min(...origins.map((rect) => rect.y));
+    viewport.centerOn(left - 24 + halfWidth, top - 40 + el.clientHeight / 2 / readable, readable);
+    return true;
+  };
+
+  // Deliberately no dependency list: the request flag is the gate, and the
+  // pass that makes the map measurable (a ResizeObserver tick after the list
+  // view hands the canvas back) only shows up as a re-render.
+  useEffect(() => {
+    if (!frameRequestRef.current || view !== "graph" || graphLayout !== "map") return;
+    if (frameGraph()) frameRequestRef.current = false;
+  });
+
+  /**
+   * Bring one node into view without changing zoom. On a phone the Inspector
+   * sheet covers the lower part of the canvas, so the node is aimed at the
+   * strip above it instead of the true centre.
+   */
+  const revealNode = useCallback(
+    (id: string) => {
+      const rect = nodeRects.find((entry) => entry.id === id);
+      const el = graphScrollRef.current;
+      if (!rect || !el) return;
+      let lift = 0;
+      if (isPhone) {
+        // Aim at the middle of the canvas strip left above the sheet, which
+        // tops out at 52dvh (see .inspector in the phone block of global.css).
+        const box = el.getBoundingClientRect();
+        const stripTop = Math.max(box.top, 0);
+        const stripBottom = Math.min(box.bottom, innerHeight * 0.48);
+        if (stripBottom > stripTop) {
+          lift = (box.top + box.height / 2 - (stripTop + stripBottom) / 2) / viewport.zoom;
+        }
+      }
+      viewport.centerOn(rect.x + rect.w / 2, rect.y + rect.h / 2 + lift, undefined, true);
+    },
+    [nodeRects, isPhone, viewport],
+  );
+
+  // Read through refs so the map-tap handler below can stay a stable callback
+  // for StoryNode's memo while still seeing the current breakpoint.
+  const isPhoneRef = useRef(isPhone);
+  isPhoneRef.current = isPhone;
+  const revealNodeRef = useRef(revealNode);
+  revealNodeRef.current = revealNode;
+
+  /**
+   * A tap on a map card. On a phone the sheet rising over the lower canvas
+   * would bury the card just tapped, so it is panned into the strip above.
+   */
+  const inspectFromMap = useCallback(
+    (id: string, fromKeyboard: boolean) => {
+      inspectStory(id, fromKeyboard);
+      if (isPhoneRef.current) revealNodeRef.current(id);
+    },
+    [inspectStory],
+  );
+
+  /** Inspect from outside the map (Inspector lists, list view): also pan to it. */
+  const inspectAndReveal = useCallback(
+    (id: string) => {
+      inspectStory(id);
+      if (graphLayout === "map") revealNode(id);
+    },
+    [inspectStory, revealNode, graphLayout],
+  );
+
+  const changeLayout = (layout: GraphLayout) => {
+    transition(() => setGraphLayout(layout));
+    writeStorage("marvel-nexus-graph-layout", layout);
+    setAnnouncement(layout === "list" ? "Showing the watch-order list." : "Showing the map.");
+  };
 
   const openSearch = () => {
     setActiveResult(0);
@@ -981,11 +1144,12 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
             legacyCount={legacy.length}
             watched={watched}
             onOpenSearch={openSearch}
+            onTrace={choose}
           />
         </div>
       )}
 
-      {page !== "home" && <section className="workspace" id="nexus-main">
+      {(page === "graph" || page === "timeline") && <section className="workspace" id="nexus-main">
         <div className="workspace-head">
           <div>
             <div className="section-kicker">{view === "graph" ? "THE NEXUS MAP" : "THE SACRED TIMELINE"}</div>
@@ -999,6 +1163,9 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
                 ? `${requiredCount} unwatched prerequisites · arrows flow toward your destination`
                 : `Every story, ${graphNodes.length} titles · pick a destination to trace one path`
               : `${timelineResults.length} canonical MCU stops · branch universes stay in the graph`}</p>
+            {view === "graph" && (
+              <PremiereCountdown stories={allStories} onTrace={choose} activeId={destination?.id ?? null} />
+            )}
           </div>
           <div className="workspace-controls">
             {view === "timeline" && (
@@ -1033,6 +1200,28 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
 
         {view === "graph" ? (
           <>
+            <nav className="quick-paths" aria-label="Quick destinations">
+              <span>Quick paths</span>
+              <div className="quick-paths-row">
+                {featuredDestinations.map((id) => {
+                  const story = byId.get(id);
+                  if (!story) return null;
+                  const active = destination?.id === id;
+                  return (
+                    <button
+                      key={id}
+                      aria-pressed={active}
+                      className={active ? "active" : ""}
+                      data-lane={story.lane}
+                      onClick={() => (active ? resetPath() : choose(id))}
+                    >
+                      {story.title.replace(/^Avengers: /, "")}
+                      {story.upcoming && <i>Soon</i>}
+                    </button>
+                  );
+                })}
+              </div>
+            </nav>
             <div className="graph-legend">
               <span><i className="dot required" /> Required</span>
               <span><i className="dot optional" /> Deep cut</span>
@@ -1043,6 +1232,22 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
                 ))}
               </span>
               <div className="graph-actions">
+                <div className="layout-switch" role="group" aria-label="Graph layout">
+                  <button
+                    aria-pressed={graphLayout === "map"}
+                    className={graphLayout === "map" ? "active" : ""}
+                    onClick={() => changeLayout("map")}
+                  >
+                    Map
+                  </button>
+                  <button
+                    aria-pressed={graphLayout === "list"}
+                    className={graphLayout === "list" ? "active" : ""}
+                    onClick={() => changeLayout("list")}
+                  >
+                    List
+                  </button>
+                </div>
                 <button
                   aria-pressed={hideWatched}
                   className={hideWatched ? "toggle-on" : ""}
@@ -1087,8 +1292,25 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
                 </div>
               </div>
             </div>
-            <div className="graph-shell">
-              <div className="graph-map">
+            <div className={`graph-shell layout-${graphLayout} ${sheetOpen ? "sheet-open" : ""}`}>
+              {graphLayout === "list" && (
+                <PathList
+                  columns={columns}
+                  hasDestination={!!destination}
+                  destinationId={destination?.id ?? null}
+                  inspectedId={inspected.id}
+                  kind={kind}
+                  watched={watched}
+                  edges={edges}
+                  byId={byId}
+                  onInspect={inspectStory}
+                  onToggleWatched={toggleWatched}
+                />
+              )}
+              {/* Kept mounted in list mode, only hidden: the layout pass and
+                  its measurements live with these nodes, and remounting would
+                  throw them away. */}
+              <div className="graph-map" hidden={graphLayout === "list"}>
               <div
                 className={`graph-scroll ${viewport.isPanning ? "is-panning" : ""}`}
                 ref={graphScrollRef}
@@ -1111,6 +1333,12 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
                 <div
                   className="graph-columns"
                   ref={graphColumnsRef}
+                  // Touch has no hover, so a tapped title keeps its lineage lit;
+                  // tapping open canvas is how that highlight is put away.
+                  onClick={(event) => {
+                    if ((event.target as HTMLElement).closest("[data-node], .node-collapse")) return;
+                    setFocusedId(null);
+                  }}
                   // --graph-zoom rides alongside zoom so edge strokes and their
                   // arrowheads can be scale-compensated together; they must never
                   // drift apart, hence the single style object.
@@ -1199,7 +1427,7 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
                             isCollapsed={collapsed.has(story.id)}
                             hiddenCount={disclosure.hiddenCounts.get(story.id) ?? 0}
                             deepCutCount={disclosure.deepCutCounts.get(story.id) ?? 0}
-                            onInspect={inspectStory}
+                            onInspect={inspectFromMap}
                             onPreview={setPreviewedId}
                             onToggleCollapsed={toggleCollapsed}
                           />
@@ -1253,6 +1481,11 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
                   ))}
                 </ol>
               </nav>
+              <div className="graph-fab" role="group" aria-label="Zoom">
+                <button onClick={() => viewport.zoomBy(.15)} disabled={!viewport.canZoomIn} aria-label="Zoom in">+</button>
+                <button onClick={() => viewport.zoomBy(-.15)} disabled={!viewport.canZoomOut} aria-label="Zoom out">−</button>
+                <button onClick={() => frameGraph()} aria-label="Re-centre the map">⌖</button>
+              </div>
               {showMinimap && <GraphMinimap
                 nodes={nodeRects}
                 contentBox={contentBoxRef}
@@ -1283,8 +1516,9 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
                 totalPrerequisites={metrics.total}
                 takeFocus={inspectorTakesFocus}
                 onChoose={choose}
-                onInspect={inspectStory}
+                onInspect={inspectAndReveal}
                 onToggleWatched={toggleWatched}
+                onClose={() => setSheetOpen(false)}
               />
               </ErrorBoundary>
             </div>
@@ -1325,6 +1559,12 @@ function NexusApp({ page = "home" }: { page?: NexusPage }) {
           </>
         )}
       </section>}
+
+      {page === "characters" && (
+        <div id="nexus-main">
+          <CharacterTree byId={byId} watched={watched} onTraceStory={choose} />
+        </div>
+      )}
 
       {page === "home" && <HomeMethod />}
 

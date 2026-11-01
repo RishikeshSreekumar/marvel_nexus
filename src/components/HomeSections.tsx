@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import BrandLockup from "./BrandLockup";
 import HeroParticles, { type FlowLane } from "./HeroParticles";
+import PremiereCountdown from "./PremiereCountdown";
 import type { Lane } from "../lib/graph";
 import { allStories } from "../lib/stories";
 
@@ -224,11 +225,14 @@ export function HomeHero({
   legacyCount,
   watched,
   onOpenSearch,
+  onTrace,
 }: {
   chronologyCount: number;
   legacyCount: number;
   watched: ReadonlySet<string>;
   onOpenSearch: () => void;
+  /** Opens the graph on a story's path; used by the premiere countdown. */
+  onTrace: (id: string) => void;
 }) {
   const [active, setActive] = useState<Lane | null>(null);
 
@@ -264,7 +268,9 @@ export function HomeHero({
             Choose your destination <span>→</span>
           </button>
           <a className="secondary" href="/timeline">Browse the timeline</a>
+          <a className="secondary" href="/characters">Meet the characters</a>
         </div>
+        <PremiereCountdown stories={allStories} activeId={null} onTrace={onTrace} />
       </div>
 
       <nav className="multiverse-showcase" aria-label="Explore the multiverse by saga">

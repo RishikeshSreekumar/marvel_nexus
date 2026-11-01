@@ -131,8 +131,8 @@ const chronologyInput: StoryInput[] = [
   s("punisher-special", "The Punisher: One Last Kill", "Special", "2026", "2027", "Street", ["punisher-2", "daredevil-ba"], "Frank Castle returns for one last mission."),
   s("brand-new-day", "Spider-Man: Brand New Day", "Movie", "2026", "2028", "Future", ["no-way-home", "daredevil-ba", "punisher-special"], "Peter’s anonymous new chapter collides with New York’s street-level world."),
   { ...s("visionquest", "VisionQuest", "Series", "2026", "c. 2028 (editorial)", "Future", ["wandavision", "agatha"], "Vision returns years after Westview to search for his own identity.", false, true), editorialPlacement: true },
-  s("doomsday", "Avengers: Doomsday", "Movie", "2026", "Upcoming", "Future", ["thunderbolts", "fantastic-four", "loki-2", "deadpool-wolverine", "brand-new-day", "doctor-strange-2", "quantumania", "brave-new-world", "wakanda-forever", "love-thunder", "shang-chi"], "The Avengers, Wakandans, Fantastic Four, and X-Men face Doctor Doom.", false, true),
-  s("secret-wars", "Avengers: Secret Wars", "Movie", "2027", "Upcoming", "Future", ["doomsday"], "The Multiverse Saga’s announced culmination.", false, true),
+  { ...s("doomsday", "Avengers: Doomsday", "Movie", "2026", "Upcoming", "Future", ["thunderbolts", "fantastic-four", "loki-2", "deadpool-wolverine", "brand-new-day", "doctor-strange-2", "quantumania", "brave-new-world", "wakanda-forever", "love-thunder", "shang-chi"], "The Avengers, Wakandans, Fantastic Four, and X-Men face Doctor Doom.", false, true), premiere: "2026-12-18" },
+  { ...s("secret-wars", "Avengers: Secret Wars", "Movie", "2027", "Upcoming", "Future", ["doomsday"], "The Multiverse Saga’s announced culmination.", false, true), premiere: "2027-12-17" },
 ];
 
 const legacyInput: StoryInput[] = [
@@ -210,3 +210,19 @@ if (import.meta.env?.DEV) {
   validateStories(allStories, { total: 97, canonical: 79, legacy: 18 });
 }
 export const byId = new Map(allStories.map((story) => [story.id, story]));
+
+/**
+ * One-tap destinations offered above the map. The upcoming tentpoles lead —
+ * the countdown already points at the next one — followed by the recent
+ * films most people want to catch up to. Edit freely; ids are validated in
+ * tests/graph.test.ts.
+ */
+export const featuredDestinations = [
+  "doomsday",
+  "secret-wars",
+  "brand-new-day",
+  "fantastic-four",
+  "thunderbolts",
+  "deadpool-wolverine",
+  "endgame",
+] as const;

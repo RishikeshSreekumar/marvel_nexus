@@ -1,0 +1,12 @@
+---
+import Base from "../layouts/Base.astro";
+import MarvelNexus from "../components/MarvelNexus";
+---
+
+<Base
+  title="Character Tree — Marvel Nexus"
+  description="Every major Marvel character by team, the mantles they pass on, and every story they appear in."
+  path="/characters"
+>
+  <MarvelNexus page="characters" client:load />
+</Base>
